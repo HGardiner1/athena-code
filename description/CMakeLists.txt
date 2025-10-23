@@ -12,6 +12,7 @@ install(DIRECTORY
     launch
     meshes
     rviz
+    ros2_control
     urdf
     DESTINATION share/${PROJECT_NAME}/
 )

@@ -17,19 +17,19 @@
   <xacro:include filename="$(find description)/config/mock.ros2_control.xacro" />
 
   <!-- Import smc ros2_control description -->
-  <xacro:include filename="$(find description)/config/smc.ros2_control.xacro" />
+  <xacro:include filename="$(find description)/ros2_control/arm.smc.ros2_control.xacro" />
 
   <!-- Import talon ros2_control description -->
-  <xacro:include filename="$(find description)/config/talon.ros2_control.xacro" />
+  <xacro:include filename="$(find description)/ros2_control/arm.talon.ros2_control.xacro" />
 
   <!-- Import rmd ros2_control description -->
-  <xacro:include filename="$(find description)/config/rmd.ros2_control.xacro" />
+  <xacro:include filename="$(find description)/ros2_control/arm.rmd.ros2_control.xacro" />
 
   <!-- Import actuator ros2_control description -->
-  <xacro:include filename="$(find description)/config/actuator.ros2_control.xacro" />
+  <xacro:include filename="$(find description)/ros2_control/arm.actuator.ros2_control.xacro" />
 
   <!-- Import odrive ros2_control description -->
-  <xacro:include filename="$(find description)/config/odrive.ros2_control.xacro" />
+  <!-- <xacro:include filename="$(find description)/config/odrive.ros2_control.xacro" /> -->
 
 
   <!-- create link fixed to the "world" -->
@@ -48,7 +48,7 @@
     <xacro:talon_ros2_control name="talon"/>
     <xacro:rmd_ros2_control name="rmd"/>
     <xacro:actuator_ros2_control name="actuator"/>
-    <xacro:odrive_ros2_control name="odrive"/>
+    <!-- <xacro:odrive_ros2_control name="odrive"/> -->
   </xacro:unless>
 
 
