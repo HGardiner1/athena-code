@@ -23,28 +23,17 @@ FetchContent_MakeAvailable(SerialCAN)
 # -------------------- Build SerialCAN --------------------
 add_custom_target(umdloop_can_library_build_serialcan
         COMMAND ./build_no.sh
-        COMMAND make -C Libraries/SerialCAN all
-        COMMAND make -C Libraries/CANAPI all
+        COMMAND make -C Libraries/SerialCAN all CFLAGS=-fPIC CXXFLAGS=-fPIC
+        COMMAND make -C Libraries/CANAPI all CFLAGS=-fPIC CXXFLAGS=-fPIC
         WORKING_DIRECTORY ${serialcan_SOURCE_DIR}
-        COMMENT "Building SerialCAN libraries"
+        COMMENT "Building SerialCAN libraries with -fPIC"
 )
 
 # -------------------- SerialCAN static libraries --------------------
 set(SERIALCAN_LIB ${serialcan_SOURCE_DIR}/Libraries/SerialCAN/libserialcan.a)
 set(UVCANSLC_LIB ${serialcan_SOURCE_DIR}/Libraries/CANAPI/libuvcanslc.a)
 
-# Create imported targets for SerialCAN
-add_library(SerialCAN STATIC IMPORTED)
-set_target_properties(SerialCAN PROPERTIES
-        IMPORTED_LOCATION ${SERIALCAN_LIB}
-)
-add_dependencies(SerialCAN umdloop_can_library_build_serialcan)
-
-add_library(UVCANSLC STATIC IMPORTED)
-set_target_properties(UVCANSLC PROPERTIES
-        IMPORTED_LOCATION ${UVCANSLC_LIB}
-)
-add_dependencies(UVCANSLC umdloop_can_library_build_serialcan)
+# We'll link the static libraries directly instead of using imported targets
 
 # Create interface library to handle SerialCAN includes
 add_library(SerialCAN_Headers INTERFACE)
@@ -77,15 +66,19 @@ endif()
 add_library(umdloop_can_library STATIC ${UMDLOOP_CAN_LIBRARY_SOURCES})
 add_library(umdloop_can_library::umdloop_can_library ALIAS umdloop_can_library)
 
+# Enable position independent code for static library
+set_target_properties(umdloop_can_library PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 target_include_directories(umdloop_can_library
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
 
-# Link SerialCAN statically
+# Link SerialCAN static libraries directly
 target_link_libraries(umdloop_can_library
-        PUBLIC SerialCAN UVCANSLC SerialCAN_Headers
+        PRIVATE ${SERIALCAN_LIB} ${UVCANSLC_LIB}
+        PUBLIC SerialCAN_Headers
 )
 
 # Ensure SerialCAN builds first
@@ -130,6 +123,10 @@ install(EXPORT umdloop_can_libraryTargets
         NAMESPACE umdloop_can_library::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/umdloop_can_library
 )
+
+# Export include directories for ament
+ament_export_include_directories(include)
+ament_export_targets(umdloop_can_libraryTargets)
 
 # Generate config files for find_package
 include(CMakePackageConfigHelpers)

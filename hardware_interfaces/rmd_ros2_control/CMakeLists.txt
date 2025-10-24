@@ -12,6 +12,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp_lifecycle
   realtime_tools
   msgs
+  umdloop_can_library
 )
 
 # find dependencies
@@ -21,6 +22,8 @@ find_package(ament_cmake_auto REQUIRED) # allow the following two lines
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
   find_package(${Dependency} REQUIRED)
 endforeach()
+
+# umdloop_can_library is found through the dependency loop above
 
 ament_auto_find_build_dependencies()
 ament_export_dependencies(rosidl_default_runtime)
@@ -39,9 +42,17 @@ $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 $<INSTALL_INTERFACE:include/rmd_ros2_control>
 )
 
+# Link directly to umdloop_can_library target
+target_link_libraries(rmd_ros2_control PUBLIC umdloop_can_library::umdloop_can_library)
+
 ament_target_dependencies(
   rmd_ros2_control PUBLIC
-  ${THIS_PACKAGE_INCLUDE_DEPENDS}
+  hardware_interface
+  pluginlib
+  rclcpp
+  rclcpp_lifecycle
+  realtime_tools
+  msgs
 )
 
 # Export hardware plugins
