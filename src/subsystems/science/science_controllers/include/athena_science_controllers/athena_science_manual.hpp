@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "athena_science_manual_parameters.hpp"
+#include "athena_science_controllers/athena_science_manual_parameters.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "athena_science_controllers/visibility_control.h"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
@@ -27,11 +27,10 @@
 #include "realtime_tools/realtime_publisher.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 
-// TODO(anyone): Replace with controller specific messages
 #include "control_msgs/msg/joint_controller_state.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 
-namespace science_controllers
+namespace athena_science_controllers
 {
 
 // name constants for state interfaces
@@ -100,6 +99,10 @@ protected:
   athena_science_manual::Params params_;
 
   std::vector<std::string> state_joints_;
+  std::vector<std::string> stepper_joints_;
+  std::vector<std::string> talon_joints_;
+  std::vector<std::string> servo_joints_;
+  std::string auger_spinner_;
 
   // Command subscribers and Controller State publisher
   rclcpp::Subscription<ControllerReferenceMsg>::SharedPtr ref_subscriber_ = nullptr;
@@ -119,16 +122,6 @@ private:
   void reference_callback(const std::shared_ptr<ControllerReferenceMsg> msg);
 
   std::vector<int32_t> prev_buttons_;
-
-  // ---- Velocity limit vectors indexed by control_mode_type (0..3)
-  /* struct Params {
-    std::vector<double> velocity_limits_talon_lift;
-    std::vector<double> velocity_limits_talon_scoop;
-    std::vector<double> velocity_limits_stepper;
-    std::vector<double> velocity_limits_auger;
-    std::vector<double> velocity_limits_auger_spinner;
-  }; */
-
 
   control_mode_type current_mode_{control_mode_type::STAGE1};
   void load_velocity_limits();  // called in on_configure()
@@ -165,6 +158,6 @@ private:
   };
 };
 
-// namespace science_controllers
+// namespace athena_science_controllers
 
 #endif  // ATHENA_SCIENCE_CONTROLLERS__ATHENA_SCIENCE_MANUAL_HPP_

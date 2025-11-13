@@ -176,7 +176,7 @@ def generate_launch_description():
     )'''
 
     # Active Spawners
-    robot_controller_names = ["joint_group_position_controller", "athena_science_manual_controller"] # robot_controller
+    robot_controller_names = ["athena_science_manual_controller"] # robot_controller
     robot_controller_spawners = [] 
     for controller in robot_controller_names:
         robot_controller_spawners += [
@@ -187,7 +187,7 @@ def generate_launch_description():
             )
         ]
 
-    inactive_robot_controller_names = ["joint_group_velocity_controller"]
+    inactive_robot_controller_names = ["joint_group_velocity_controller", "joint_group_position_controller"]
     inactive_robot_controller_spawners = [] # Set the ones you want inactive in the beginning (e.g., velocity controller, etc.)
     for controller in inactive_robot_controller_names:
         inactive_robot_controller_spawners += [
@@ -205,7 +205,7 @@ def generate_launch_description():
             on_exit=[TimerAction(
                 period=3.0,
                 actions=[Node(
-                    package="science_bringup",
+                    package="bringup",
                     executable="controller_switcher.py",
                     name="controller_switcher",
                     output="screen"
