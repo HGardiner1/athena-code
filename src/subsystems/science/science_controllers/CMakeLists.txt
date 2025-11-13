@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(science_controllers)
+project(athena_science_controllers)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
   add_compile_options(-Wall -Wextra -Werror=conversion -Werror=unused-but-set-variable -Werror=return-type -Werror=shadow -Wno-shadow) 
