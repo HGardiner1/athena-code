@@ -16,15 +16,25 @@ ARGUMENTS = [
                           description='use_sim_time'),
     DeclareLaunchArgument('namespace', default_value='',
                           description='Robot namespace'),
+    
 ]
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('description')
     
-    urdf_file = os.path.join(pkg_share, 'urdf', 'UMDLoop_Rover2025_URDF.urdf')
+    urdf_file = os.path.join(pkg_share, 'urdf', 'athena_drive.urdf.xacro')
+    controllers_file = os.path.join(pkg_share, 'config', 'athena_drive_controllers.yaml')
+
     
     namespace = LaunchConfiguration('namespace')
     robot_name = 'rover'
+
+    robot_description_content = Command([
+        'xacro ', urdf_file,
+        ' use_mock_hardware:=true',
+        ' sim_gazebo:=true',
+        f' simulation_controllers:={controllers_file}'
+    ])
 
     spawn_robot_group_action = GroupAction([
         PushRosNamespace(namespace),
@@ -36,7 +46,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'robot_description': ParameterValue(
-                    Command(['xacro ', urdf_file]),
+                    robot_description_content,
                     value_type=str
                 ),
                 'use_sim_time': LaunchConfiguration('use_sim_time')

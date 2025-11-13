@@ -6,7 +6,6 @@
 
   <xacro:arg name="use_mock_hardware" default="false"/>
   <xacro:arg name="mock_sensor_commands" default="false"/>
-  <xacro:arg name="sim_gazebo_classic" default="true"/>
   <xacro:arg name="sim_gazebo" default="true"/>
   <xacro:arg name="simulation_controllers" default=""/>
 
@@ -35,8 +34,6 @@
   <!-- Import odrive ros2_control description -->
   <xacro:include filename="$(find description)/ros2_control/drive/drive.odrive.ros2_control.xacro" />
 
-  <!-- create link fixed to the "world" -->
-  <link name="world"/>
 
   <xacro:description/>
 
@@ -46,7 +43,6 @@
     prefix="$(arg prefix)"
     use_mock_hardware="$(arg use_mock_hardware)"
     mock_sensor_commands="$(arg mock_sensor_commands)"
-    sim_gazebo_classic="$(arg sim_gazebo_classic)"
     sim_gazebo="$(arg sim_gazebo)"
     simulation_controllers="$(arg simulation_controllers)"/>
   </xacro:if>
