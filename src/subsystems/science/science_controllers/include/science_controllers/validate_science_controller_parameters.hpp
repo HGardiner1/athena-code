@@ -11,8 +11,8 @@
 // [RosTeamWorkspace](https://github.com/StoglRobotics/ros_team_workspace) repository.
 //
 
-#ifndef ATHENA_SCIENCE_CONTROLLERS__VALIDATE_SCIENCE_CONTROLLER_PARAMETERS_HPP_
-#define ATHENA_SCIENCE_CONTROLLERS__VALIDATE_SCIENCE_CONTROLLER_PARAMETERS_HPP_
+#ifndef SCIENCE_CONTROLLERS__VALIDATE_SCIENCE_CONTROLLER_PARAMETERS_HPP_
+#define SCIENCE_CONTROLLERS__VALIDATE_SCIENCE_CONTROLLER_PARAMETERS_HPP_
 
 #include <string>
 #include "parameter_traits/parameter_traits.hpp"
@@ -35,4 +35,4 @@ inline parameter_traits::Result forbidden_interface_name_prefix(rclcpp::Paramete
 
 }  // namespace parameter_traits
 
-#endif  // ATHENA_SCIENCE_CONTROLLERS__VALIDATE_ATHENA_SCIENCE_MANUAL_PARAMETERS_HPP_
+#endif  // SCIENCE_CONTROLLERS__VALIDATE_SCIENCE_MANUAL_PARAMETERS_HPP_

@@ -42,7 +42,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "controllers_file",
-            default_value="science_controllers.yaml",
+            default_value="athena_science_controllers.yaml",
             description="YAML file with the controllers configuration.",
         )
     )
@@ -89,8 +89,8 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "robot_controller",
-            default_value="athena_science_manual_controller",
-            choices=["athena_science_manual_controller"],
+            default_value="science_controller",
+            choices=["science_controller"],
             description="Robot controller to start.",
         )
     )
@@ -176,7 +176,7 @@ def generate_launch_description():
     )'''
 
     # Active Spawners
-    robot_controller_names = ["athena_science_manual_controller"] # robot_controller
+    robot_controller_names = ["science_controller"] # robot_controller
     robot_controller_spawners = [] 
     for controller in robot_controller_names:
         robot_controller_spawners += [

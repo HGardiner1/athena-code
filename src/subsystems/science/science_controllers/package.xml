@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>athena_science_controllers</name>
+  <name>science_controllers</name>
   <version>0.0.0</version>
   <description>Contains</description>
   <maintainer email="duttaishan01@gmail.com">Ishan Dutta</maintainer>
@@ -28,7 +28,7 @@
   <depend>std_srvs</depend>
 
   <export>
-    <pluginlib plugin="${prefix}/athena_science_controllers.xml"/>
+    <pluginlib plugin="${prefix}/science_controllers.xml"/>
     <build_type>ament_cmake</build_type>
   </export>
 

@@ -18,11 +18,11 @@ Source of this file are templates in
 [RosTeamWorkspace](https://github.com/StoglRobotics/ros_team_workspace) repository.
 -->
 
-<library path="libathena_science_manual">
-  <class name="athena_science_controllers/AthenaScienceManual"
-         type="athena_science_controllers::AthenaScienceManual" base_class_type="controller_interface::ControllerInterface">
+<library path="libscience_manual">
+  <class name="science_controllers/ScienceManual"
+         type="science_controllers::ScienceManual" base_class_type="controller_interface::ControllerInterface">
   <description>
-    AthenaScienceManual ros2_control controller.
+    ScienceManual ros2_control controller.
   </description>
   </class>
 </library>

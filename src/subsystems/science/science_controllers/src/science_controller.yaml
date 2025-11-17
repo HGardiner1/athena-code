@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Stogl Robotics Consulting UG (haftungsbeschränkt)
 # Licensed under the Apache License, Version 2.0 (the "License");
 # ...
-athena_science_manual:
+science_manual:
   joints:
     type: string_array
     default_value: []
@@ -44,7 +44,7 @@ athena_science_manual:
 
   velocity_limits_talon_lift:
     type: double_array
-    default_value: [1.0, 0.1, 0.0, 0.3]
+    default_value: [1.0, 0.1, 0.0, 0.3] 
 
   velocity_limits_talon_scoop:
     type: double_array
@@ -80,20 +80,19 @@ athena_science_manual:
 
   talon_lift:
     type: string_array
-    default_value: ["talon_lift"]
-    description: "The Talon motor controller for the lift (2 motors)"
-    read_only: true
+    default_value: []
+    description: "Lift Talon motors (optional)"
+    read_only: false       # allow overriding
     validation:
       unique<>: null
-      not_empty<>: null
+      # not_empty deleted
 
   talon_scoop:
     type: string
-    default_value: "talon_scoop"
-    description: "Scoop Talon motor controller"
-    read_only: true
-    validation:
-      not_empty<>: null
+    default_value: ""
+    description: "(Optional)"
+    read_only: false
+    # no validation
 
   scoop_servos:
     type: string_array
@@ -106,11 +105,9 @@ athena_science_manual:
 
   auger_spinner:
     type: string
-    default_value: "auger_spinner"
-    description: "The Talon motor controller for the auger spinner"
-    read_only: true
-    validation:
-      not_empty<>: null
+    default_value: ""
+    description: "(Optional)"
+    read_only: false
 
   auger:
     type: string
