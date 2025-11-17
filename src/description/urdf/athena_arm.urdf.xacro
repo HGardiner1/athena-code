@@ -20,7 +20,7 @@
   <xacro:include filename="$(find description)/ros2_control/arm/arm.smc.ros2_control.xacro" />
 
   <!-- Import talon ros2_control description -->
-  <xacro:include filename="$(find description)/ros2_control/arm/arm.talon.ros2_control.xacro" />
+  <!-- <xacro:include filename="$(find description)/ros2_control/arm/arm.talon.ros2_control.xacro" /> -->
 
   <!-- Import rmd ros2_control description -->
   <xacro:include filename="$(find description)/ros2_control/arm/arm.rmd.ros2_control.xacro" />
@@ -45,7 +45,7 @@
   </xacro:if>
   <xacro:unless value="$(arg use_mock_hardware)"> <!-- HARDWARE -->
     <xacro:smc_ros2_control name="smc"/>
-    <xacro:talon_ros2_control name="talon"/>
+    <!-- <xacro:talon_ros2_control name="talon"/> -->
     <xacro:rmd_ros2_control name="rmd"/>
     <xacro:actuator_ros2_control name="actuator"/>
     <!-- <xacro:odrive_ros2_control name="odrive"/> -->

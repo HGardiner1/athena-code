@@ -21,7 +21,6 @@
   <depend>rviz2</depend>
   <depend>joint_state_publisher_gui</depend>
   <depend>joint_state_broadcaster</depend>
-  <depend>gazebo</depend>
 
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>launch</exec_depend>
