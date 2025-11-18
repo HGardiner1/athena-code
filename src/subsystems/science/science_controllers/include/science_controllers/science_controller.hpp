@@ -11,23 +11,22 @@
 // [RosTeamWorkspace](https://github.com/StoglRobotics/ros_team_workspace) repository.
 //
 
-#ifndef ATHENA_SCIENCE_CONTROLLERS__ATHENA_SCIENCE_MANUAL_HPP_
-#define ATHENA_SCIENCE_CONTROLLERS__ATHENA_SCIENCE_MANUAL_HPP_
+#ifndef SCIENCE_CONTROLLERS__SCIENCE_MANUAL_HPP_
+#define SCIENCE_CONTROLLERS__SCIENCE_MANUAL_HPP_
 
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "athena_science_manual_parameters.hpp"
+#include "science_controllers/science_manual_parameters.hpp"
 #include "controller_interface/controller_interface.hpp"
-#include "athena_science_controllers/visibility_control.h"
+#include "science_controllers/visibility_control.h"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 
-// TODO(anyone): Replace with controller specific messages
 #include "control_msgs/msg/joint_controller_state.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 
@@ -57,34 +56,34 @@ enum class control_speed_type : std::uint8_t
   FAST = 3
 };
 
-class AthenaScienceManual : public controller_interface::ControllerInterface
+class ScienceManual : public controller_interface::ControllerInterface
 {
 public:
-  ATHENA_SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
-  AthenaScienceManual();
+  SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
+  ScienceManual();
 
-  ATHENA_SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
+  SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
   controller_interface::CallbackReturn on_init() override;
 
-  ATHENA_SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
+  SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
   controller_interface::InterfaceConfiguration command_interface_configuration() const override;
 
-  ATHENA_SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
+  SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
   controller_interface::InterfaceConfiguration state_interface_configuration() const override;
 
-  ATHENA_SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
+  SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
   controller_interface::CallbackReturn on_configure(
     const rclcpp_lifecycle::State & previous_state) override;
 
-  ATHENA_SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
+  SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
   controller_interface::CallbackReturn on_activate(
     const rclcpp_lifecycle::State & previous_state) override;
 
-  ATHENA_SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
+  SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
   controller_interface::CallbackReturn on_deactivate(
     const rclcpp_lifecycle::State & previous_state) override;
 
-  ATHENA_SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
+  SCIENCE_CONTROLLERS__VISIBILITY_PUBLIC
   controller_interface::return_type update(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
@@ -96,10 +95,14 @@ public:
 
 protected:
 
-  std::shared_ptr<athena_science_manual::ParamListener> param_listener_;
-  athena_science_manual::Params params_;
+  std::shared_ptr<science_manual::ParamListener> param_listener_;
+  science_manual::Params params_;
 
   std::vector<std::string> state_joints_;
+  std::vector<std::string> stepper_joints_;
+  //std::vector<std::string> talon_joints_;
+  std::vector<std::string> servo_joints_;
+  //std::string auger_spinner_;
 
   // Command subscribers and Controller State publisher
   rclcpp::Subscription<ControllerReferenceMsg>::SharedPtr ref_subscriber_ = nullptr;
@@ -115,30 +118,21 @@ protected:
 
 private:
   // callback for topic interface
-  ATHENA_SCIENCE_CONTROLLERS__VISIBILITY_LOCAL
+  SCIENCE_CONTROLLERS__VISIBILITY_LOCAL
   void reference_callback(const std::shared_ptr<ControllerReferenceMsg> msg);
 
   std::vector<int32_t> prev_buttons_;
-
-  // ---- Velocity limit vectors indexed by control_mode_type (0..3)
-  /* struct Params {
-    std::vector<double> velocity_limits_talon_lift;
-    std::vector<double> velocity_limits_talon_scoop;
-    std::vector<double> velocity_limits_stepper;
-    std::vector<double> velocity_limits_auger;
-    std::vector<double> velocity_limits_auger_spinner;
-  }; */
-
 
   control_mode_type current_mode_{control_mode_type::STAGE1};
   void load_velocity_limits();  // called in on_configure()
 
   void send_commands(
-    double lift_cmd,
+    //double lift_cmd,
     double stepper_cmd,
     double scoop_cmd,
-    double auger_cmd,
-    double auger_spinner_cmd);
+    double auger_cmd
+    //double auger_spinner_cmd
+    );
   };
 
   static constexpr double max_lift_velocity = 1.0;
@@ -151,7 +145,7 @@ private:
   double auger_position = 0;
   double cap_position = 0;
 
-  enum CommandInterfaces
+  /*enum CommandInterfaces
   {
     IDX_LIFT_TALON_VELOCITY = 0,
     IDX_STEPPERS_VELOCITY_START,  
@@ -161,10 +155,23 @@ private:
     IDX_STEPPERS_PUMPING_MODE,
     IDX_AUGER_SERVO_POSITION,
     IDX_CAP_SERVO_POSITION,
-    CMD_ITFS_COUNT  // total number of command interfaces
+    CMD_ITFS_COUNT  
+  }; */
+
+  enum CommandInterfaces
+  {
+    IDX_STEPPER_A_POSITION = 0,
+    IDX_STEPPER_B_POSITION = 1,
+    IDX_SCOOP_A_POSITION   = 2,
+    IDX_SCOOP_B_POSITION   = 3,
+    IDX_AUGER_POSITION     = 4,
+    IDX_CAP_POSITION       = 5,
+    CMD_ITFS_COUNT // total number of command interfaces
   };
+
+  
 };
 
 // namespace science_controllers
 
-#endif  // ATHENA_SCIENCE_CONTROLLERS__ATHENA_SCIENCE_MANUAL_HPP_
+#endif  // SCIENCE_CONTROLLERS__SCIENCE_MANUAL_HPP_

@@ -1,8 +1,7 @@
 # Copyright (c) 2024 Stogl Robotics Consulting UG (haftungsbeschränkt)
 # Licensed under the Apache License, Version 2.0 (the "License");
 # ...
-
-athena_science_manual:
+science_manual:
   joints:
     type: string_array
     default_value: []
@@ -45,7 +44,7 @@ athena_science_manual:
 
   velocity_limits_talon_lift:
     type: double_array
-    default_value: [1.0, 0.1, 0.0, 0.3]
+    default_value: [1.0, 0.1, 0.0, 0.3] 
 
   velocity_limits_talon_scoop:
     type: double_array
@@ -65,7 +64,7 @@ athena_science_manual:
 
   stepper_motor_a:
     type: string
-    default_value: ""
+    default_value: "stepper_motor_a"
     description: "First Stepper Motor"
     read_only: true
     validation:
@@ -73,49 +72,32 @@ athena_science_manual:
 
   stepper_motor_b:
     type: string
-    default_value: ""
+    default_value: "stepper_motor_b"
     description: "Second Stepper Motor"
     read_only: true
     validation:
       not_empty<>: null
 
-  stepper_motor_c:
-    type: string
-    default_value: ""
-    description: "Third Stepper Motor"
-    read_only: true
-    validation:
-      not_empty<>: null
-
-  stepper_motor_d:
-    type: string
-    default_value: ""
-    description: "Fourth Stepper Motor"
-    read_only: true
-    validation:
-      not_empty<>: null
-
   talon_lift:
-    type: string
-    default_value: "talon_lift"
-    description: "The Talon motor controller for the lift (2 motors)"
-    read_only: true
+    type: string_array
+    default_value: []
+    description: "Lift Talon motors (optional)"
+    read_only: false       # allow overriding
     validation:
       unique<>: null
-      not_empty<>: null
+      # not_empty deleted
 
   talon_scoop:
     type: string
     default_value: ""
-    description: "Scoop Talon motor controller"
-    read_only: true
-    validation:
-      not_empty<>: null
+    description: "(Optional)"
+    read_only: false
+    # no validation
 
   scoop_servos:
     type: string_array
-    default_value: ["scoop_a", "scoop_b", "scoop_c", "scoop_d"]
-    description: "The servos for the scoop (4 servos)"
+    default_value: ["scoop_a", "scoop_b"]
+    description: "The servos for the scoop (2 servos)"
     read_only: true
     validation:
       unique<>: null
@@ -124,14 +106,12 @@ athena_science_manual:
   auger_spinner:
     type: string
     default_value: ""
-    description: "The Talon motor controller for the auger spinner"
-    read_only: true
-    validation:
-      not_empty<>: null
+    description: "(Optional)"
+    read_only: false
 
   auger:
     type: string
-    default_value: ""
+    default_value: "auger"
     description: "The Servo motor controller for the auger"
     read_only: true
     validation:
@@ -139,7 +119,7 @@ athena_science_manual:
 
   cap:
     type: string
-    default_value: ""
+    default_value: "cap"
     description: "The Servo motor controller for the cap"
     read_only: true
     validation:
