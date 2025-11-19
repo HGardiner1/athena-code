@@ -1,4 +1,4 @@
-<library path="servo_ros2_control"> <!-- library path which corresponds to cmake. There will be a file called actuator_ros2_control.so somewhere in install-->
+<library path="servo_ros2_control"> <!-- library path which corresponds to cmake. -->
   <class name="servo_ros2_control/SERVOHardwareInterface"
          type="servo_ros2_control::SERVOHardwareInterface" 
          base_class_type="hardware_interface::SystemInterface"> <!-- name and type rely on the namespace in the hardware interface. Keep this in mind -->

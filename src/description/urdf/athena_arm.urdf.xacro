@@ -25,8 +25,8 @@
   <!-- Import rmd ros2_control description -->
   <xacro:include filename="$(find description)/ros2_control/arm/arm.rmd.ros2_control.xacro" />
 
-  <!-- Import actuator ros2_control description -->
-  <xacro:include filename="$(find description)/ros2_control/arm/arm.actuator.ros2_control.xacro" />
+  <!-- Import servo ros2_control description -->
+  <xacro:include filename="$(find description)/ros2_control/arm/arm.servo.ros2_control.xacro" />
 
   <!-- Import odrive ros2_control description -->
   <!-- <xacro:include filename="$(find description)/config/odrive.ros2_control.xacro" /> -->
@@ -47,7 +47,7 @@
     <xacro:smc_ros2_control name="smc"/>
     <!-- <xacro:talon_ros2_control name="talon"/> -->
     <xacro:rmd_ros2_control name="rmd"/>
-    <xacro:actuator_ros2_control name="actuator"/>
+    <xacro:servo_ros2_control name="servo"/>
     <!-- <xacro:odrive_ros2_control name="odrive"/> -->
   </xacro:unless>
 
