@@ -110,23 +110,19 @@ private:
   double encoder_position;
   double motor_velocity;
   double motor_position;
+  std::vector<double> rated_max;
 
   std::vector<bool> joint_initialization_;
 
-  rclcpp::Publisher<msgs::msg::CANA>::SharedPtr science_can_publisher_;
-  rclcpp::Subscription<msgs::msg::CANA>::SharedPtr science_can_subscriber_;
-  rclcpp::Node::SharedPtr node_;
-  uint16_t current_iteration;
+  CANLib::SocketCanBus canBus;
+  CANLib::CanFrame can_tx_frame_;
 
-
-  msgs::msg::CANA received_joint_data_;
-
+  std::vector<int> joint_node_ids;
   std::vector<int> joint_gear_ratios;
-  std::vector<int> joint_orientation;
 
 
 
-  enum integration_level_t : std::uint8_t
+  enum class integration_level_t : std::uint8_t
   {
     UNDEFINED = 0,
     POSITION = 1,
@@ -135,7 +131,6 @@ private:
 
   // Active control mode for each actuator
   std::vector<integration_level_t> control_level_;
-
 };
 
 }  // namespace stepper_ros2_control
