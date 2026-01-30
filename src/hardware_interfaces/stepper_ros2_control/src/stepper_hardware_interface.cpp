@@ -83,10 +83,6 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_init(
   motor_velocity.assign(num_joints, 0.0);
   device_status.assign(num_joints, -1);
 
-  heartbeat_period_ = 0.1;   // 10 Hz
-  heartbeat_elapsed_ = 0.0;
-  heartbeat_enabled_ = true;
-
   control_level_.resize(num_joints, integration_level_t::POSITION);
 
   for (size_t i = 0; i < initial_position_.size(); ++i) {
@@ -146,8 +142,6 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_configure(
     RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Failed to open CAN interface");
     return hardware_interface::CallbackReturn::ERROR;
   }
-
-  heartbeat_enabled_ = false;
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -225,8 +219,6 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_cleanup(
     canBus.send(can_tx_frame_);
   }
 
-  heartbeat_enabled_ = false;
-
   // Close CAN bus
   canBus.close();
   RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Cleaning up successful!");
@@ -244,8 +236,6 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_activate(
   for (size_t i = 0; i < joint_command_position_.size(); ++i) {
     RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Joint %zu command position initialized to: %f", i, joint_command_position_[i]);
   }
-
-  heartbeat_enabled_ = true;
 
   RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Successfully activated!");
   return hardware_interface::CallbackReturn::SUCCESS;
@@ -270,8 +260,6 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_deactivate(
     can_tx_frame_.data = { static_cast<uint8_t>((command_nibble << 4) | device_id_nibble) };
     canBus.send(can_tx_frame_);
   }
-
-  heartbeat_enabled_ = false;
 
   RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Successfully deactivated all STEPPER motors!");
 
@@ -348,23 +336,6 @@ hardware_interface::return_type stepper_ros2_control::STEPPERHardwareInterface::
   const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
 {
 
-  heartbeat_elapsed_ += period.seconds();
-
-  if (heartbeat_elapsed_ >= heartbeat_period_) {
-    heartbeat_elapsed_ = 0.0;
-
-    CANLib::CanFrame hb_frame;
-    hb_frame.id = 0x90;
-    hb_frame.dlc = 2;
-    hb_frame.data[0] = 0xA0;
-    hb_frame.data[1] = heartbeat_enabled_ ? 0x01 : 0x00;
-
-    canBus.send(hb_frame);
-
-    if (DEBUG_MODE) {
-      RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Sent heartbeat");
-    }
-  }
 
   
   int data[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
