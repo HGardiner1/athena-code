@@ -36,7 +36,8 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
 
-#define DEBUG_MODE 1 // 0 for off 1 for on
+
+#define DEBUG_MODE 0 // 0 for off 1 for on
 
 using std::placeholders::_1;
 
@@ -52,21 +53,16 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_init(
     return hardware_interface::CallbackReturn::ERROR;
   }
   
+  /*
+  IF YOU WANT TO USE PARAMETERS FROM ROS2_CONTROL XACRO, DO THAT HERE!!!
+  */
+  
+  // This stores the can ids for each joint aka motor
   
   for (auto& joint : info_.joints) {
-    joint_node_ids.push_back(std::abs(std::stoi(joint.parameters.at("node_id"), nullptr, 0)));
-    joint_gear_ratios.push_back(std::abs(std::stoi(joint.parameters.at("gear_ratio"))));
-    rated_max.push_back(std::abs(std::stod(joint.parameters.at("rated_max")))*(M_PI/180.0)); 
-
-    std::string joint_type = joint.parameters.at("joint_type");
-
-    if (joint_type != "standard" && joint_type != "continuous") {
-      RCLCPP_ERROR(rclcpp::get_logger("STEPPERHardwareInterface"), "Invalid joint_type parameter for joint %s. Must be 'standard' or 'continuous'.", joint.name.c_str());
-      return hardware_interface::CallbackReturn::ERROR;
-    } else {
-      joint_type_.push_back(joint.parameters.at("joint_type"));
-    }
-
+    
+    joint_gear_ratios.push_back(std::stoi(joint.parameters.at("gear_ratio")));
+    initial_position_.push_back(std::stof(joint.parameters.at("initial_position")));
   }
 
   num_joints = static_cast<int>(info_.joints.size());
@@ -83,11 +79,15 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_init(
   joint_command_velocity_.assign(num_joints, 0.0);
 
   encoder_position = 0.0;
-  motor_position = 0.0;
-  motor_velocity = 0.0;
+  motor_position.assign(num_joints, 0.0);
+  motor_velocity.assign(num_joints, 0.0);
+  device_status.assign(num_joints, -1);
+
+  heartbeat_period_ = 0.1;   // 10 Hz
+  heartbeat_elapsed_ = 0.0;
+  heartbeat_enabled_ = true;
 
   control_level_.resize(num_joints, integration_level_t::POSITION);
-  current_joint = 0;
 
   for (size_t i = 0; i < initial_position_.size(); ++i) {
     RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Joint %zu command vel in on_init: %f", i, joint_command_velocity_[i]);
@@ -101,7 +101,7 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_shutdown(
   const rclcpp_lifecycle::State & previous_state)
 {
   // Reuse cleanup logic which shuts down the motor and then deinitializes shared pointers.
-  // Need this in case on_cleanup never gets called
+  // Need this in case on_cleanup never gets calleds
   return this->on_cleanup(previous_state);
 }
 
@@ -147,6 +147,8 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_configure(
     return hardware_interface::CallbackReturn::ERROR;
   }
 
+  heartbeat_enabled_ = false;
+
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
@@ -162,23 +164,34 @@ void STEPPERHardwareInterface::onCanMessage(const CANLib::CanFrame& frame) {
   double raw_motor_velocity = 0.0;
 
   for(int i = 0; i < num_joints; i++){
-    if(can_rx_frame_.id == can_response_id && command_nibble == 0x7 && device_id_nibble == joint_node_ids[i]){
+    if(can_rx_frame_.id == 0x9 && command_nibble == 0x1 && device_id_nibble == joint_node_ids[i]){
       
       // DECODING CAN MESSAGE FOR VELOCITY
-      data[1] = can_rx_frame_.data[1]; // Position low byte
-      data[2] = can_rx_frame_.data[2]; // Position continued byte
-      data[3] = can_rx_frame_.data[3]; // Position high byte
-      data[4] = can_rx_frame_.data[4]; // Velocity low byte
-      data[5] = can_rx_frame_.data[5]; // Velocity continued byte
-      data[6] = can_rx_frame_.data[6]; // Velocity high byte
+      data[0] = 0x10;
+      data[1] = can_rx_frame_.data[1]; // Position Low Byte
+      data[2] = can_rx_frame_.data[2]; // Position Continued
+      data[3] = can_rx_frame_.data[3]; // Position High Byte
+      data[4] = can_rx_frame_.data[4]; // Velocity Low Byte
+      data[5] = can_rx_frame_.data[5]; // Velocity Continued
+      data[6] = can_rx_frame_.data[6]; // Velocity High Byte
 
-      // POSITION
-      // uint32 -> int16 -> double (for calcs)
-      raw_motor_position = static_cast<double>(static_cast<int32_t>((data[3] << 8) | data[1]));
+      // POSITION 
+      // Decode 24-bit signed position
+      int32_t position_raw =
+          (static_cast<int32_t>(data[3]) << 16) |
+          (static_cast<int32_t>(data[2]) << 8)  |
+          (static_cast<int32_t>(data[1]));
 
       // VELOCITY
-      // uint16 -> int16 -> double (for calcs)
-      raw_motor_velocity = static_cast<double>(static_cast<int16_t>((data[6] << 8) | data[4]));
+      // Decode 24-bit signed velocity
+      int32_t velocity_raw =
+          (static_cast<int32_t>(data[6]) << 16) |
+          (static_cast<int32_t>(data[5]) << 8)  |
+          (static_cast<int32_t>(data[4]));
+
+      // uint32 -> int16 -> double (for calcs)
+      raw_motor_position = static_cast<double>((static_cast<int32_t>(position_raw) << 8) >> 8);
+      raw_motor_velocity = static_cast<double>((static_cast<int32_t>(velocity_raw) << 8) >> 8);
 
       // CALCULATING JOINT STATE
       motor_position[i] = calculate_joint_position_from_motor_position(raw_motor_position, joint_gear_ratios[i]);
@@ -196,27 +209,29 @@ void STEPPERHardwareInterface::onCanMessage(const CANLib::CanFrame& frame) {
 hardware_interface::CallbackReturn STEPPERHardwareInterface::on_cleanup(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
-  // Motor Shutdown Command
+  RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Cleaning up ...please wait...");
+  
   // If cleanup occurs before shutdown, this is the last opportunity to shutdown motor since pointers must be deleted here
-  int8_t command_nibble = 0x81;
+  // Motor Shutdown Command
+  int8_t command_nibble = 0x30;
   int8_t device_id_nibble;
-
   for(int i = 0; i < num_joints; i++){
     can_tx_frame_ = CANLib::CanFrame();
     can_tx_frame_.id = can_command_id;
     can_tx_frame_.dlc = 1;
-
+        
     device_id_nibble = joint_node_ids[i] & 0x0F;
     can_tx_frame_.data = { static_cast<uint8_t>((command_nibble << 4) | device_id_nibble) };
     canBus.send(can_tx_frame_);
   }
 
+  heartbeat_enabled_ = false;
+
+  // Close CAN bus
   canBus.close();
   RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Cleaning up successful!");
-
   return hardware_interface::CallbackReturn::SUCCESS;
 }
-
 
 hardware_interface::CallbackReturn STEPPERHardwareInterface::on_activate(
   const rclcpp_lifecycle::State & /*previous_state*/)
@@ -230,6 +245,8 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_activate(
     RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Joint %zu command position initialized to: %f", i, joint_command_position_[i]);
   }
 
+  heartbeat_enabled_ = true;
+
   RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Successfully activated!");
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -240,7 +257,7 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_deactivate(
 {
   RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Deactivating ...please wait...");
 
-  int8_t command_nibble = 0x81;
+  int8_t command_nibble = 0x20;
   int8_t device_id_nibble;
 
   for(int i = 0; i < num_joints; i++){
@@ -253,6 +270,8 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_deactivate(
     can_tx_frame_.data = { static_cast<uint8_t>((command_nibble << 4) | device_id_nibble) };
     canBus.send(can_tx_frame_);
   }
+
+  heartbeat_enabled_ = false;
 
   RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Successfully deactivated all STEPPER motors!");
 
@@ -285,35 +304,40 @@ hardware_interface::return_type STEPPERHardwareInterface::read(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
 
-  int8_t command_nibble = 0x7;
-  int8_t device_id_nibble;
-
-  current_joint += 1;
-  current_joint = current_joint % num_joints;
   for(int i = 0; i < num_joints; i++) {
-    if(current_joint == i){
-      can_tx_frame_ = CANLib::CanFrame();
-      can_tx_frame_.id = can_command_id;
-      can_tx_frame_.dlc = 1;
+    joint_state_velocity_[i] = motor_velocity[i];
+    joint_state_position_[i] = motor_position[i];
 
-      // Command to read motor status command
-      device_id_nibble = joint_node_ids[i] & 0x0F;
-      can_tx_frame_.data = { static_cast<uint8_t>((command_nibble << 4) | device_id_nibble) };
-      canBus.send(can_tx_frame_);
-
-      // CALCULATING JOINT STATE
-      joint_state_velocity_[i] = motor_velocity[i];
-      joint_state_position_[i] = motor_position[i];
-
-      if(DEBUG_MODE == 1) {
-        RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"),
-            "Reading for joint: %s Motor Position: %f Joint position: %f Joint velocity: %f \n",
-            info_.joints[i].name.c_str(),
-            motor_position[i],
-            joint_state_position_[i], 
-            joint_state_velocity_[i]);
-      }
+    // ACCOUNTING FOR DEVICE STATUS
+    if(device_status[i] != 0x00 && device_status[i] != 0x01 && device_status[i] != -1){
+      return hardware_interface::return_type::ERROR;
     }
+
+    if(DEBUG_MODE == 1) {
+      if(device_status[i] == 0x00){
+        RCLCPP_INFO(rclcpp::get_logger("SERVOHardwareInterface"), "Joint %s is IDLE. Ready to receive commands.", info_.joints[i].name.c_str());
+      }
+      else if(device_status[i] == 0x01){
+        RCLCPP_INFO(rclcpp::get_logger("SERVOHardwareInterface"), "Joint %s is ACTIVE. Currently not receiving commands.", info_.joints[i].name.c_str());
+      }
+      else if(device_status[i] == 0x02){
+        RCLCPP_INFO(rclcpp::get_logger("SERVOHardwareInterface"), "Joint %s DOES NOT EXIST!", info_.joints[i].name.c_str());
+      }
+      else if(device_status[i] == 0x03){
+        RCLCPP_INFO(rclcpp::get_logger("SERVOHardwareInterface"), "Joint %s is in ERROR state!", info_.joints[i].name.c_str());
+      }
+      else{ // This includes -1 case. In order to avoid killing the HWI, it will operate as normal but print this warning.
+        RCLCPP_INFO(rclcpp::get_logger("SERVOHardwareInterface"), "Joint %s is in UNDEFINED state! Operation will continue.", info_.joints[i].name.c_str());
+      }
+
+      RCLCPP_INFO(rclcpp::get_logger("SERVOHardwareInterface"),
+          "Reading for joint: %s Motor Position: %f Joint position: %f Joint velocity: %f \n",
+          info_.joints[i].name.c_str(),
+          motor_position[i],
+          joint_state_position_[i], 
+          joint_state_velocity_[i]);
+    }
+    
   }
 
   return hardware_interface::return_type::OK;
@@ -321,37 +345,59 @@ hardware_interface::return_type STEPPERHardwareInterface::read(
 
 
 hardware_interface::return_type stepper_ros2_control::STEPPERHardwareInterface::write(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+  const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
 {
-  elapsed_update_time+=period.seconds();
-  int data[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-  int16_t joint_velocity = 0;
 
-  double update_period = 1.0/update_rate;
+  heartbeat_elapsed_ += period.seconds();
 
-  // HWI can only go as fast as the controller manager. To limit frequency of bus messages,
-  // keep track of time passed over iterations of this function and if it exceeds the 
-  // desired frequency of the HWI, skip message
-  if(update_period > elapsed_update_time){
-    return hardware_interface::return_type::OK;
+  if (heartbeat_elapsed_ >= heartbeat_period_) {
+    heartbeat_elapsed_ = 0.0;
+
+    CANLib::CanFrame hb_frame;
+    hb_frame.id = 0x90;
+    hb_frame.dlc = 2;
+    hb_frame.data[0] = 0xA0;
+    hb_frame.data[1] = heartbeat_enabled_ ? 0x01 : 0x00;
+
+    canBus.send(hb_frame);
+
+    if (DEBUG_MODE) {
+      RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Sent heartbeat");
+    }
   }
-  else{
-    elapsed_update_time = 0.0;
+
+  
+  int data[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  int16_t operating_velocity = 20;
+  int32_t joint_velocity = 0;
   
   for(int i = 0; i < num_joints; i++) {
     can_tx_frame_ = CANLib::CanFrame(); // Must reinstantiate else data from past iteration gets repeated
     can_tx_frame_.id = can_command_id;
     can_tx_frame_.dlc = 8;
+    
+    if(control_level_[i] == integration_level_t::VELOCITY && std::isfinite(joint_command_velocity_[i])) {
+      
+      // CALCULATE DESIRED JOINT VELOCITY
+      joint_velocity = calculate_motor_velocity_from_desired_joint_velocity(joint_command_velocity_[i], joint_gear_ratios[i]);
 
-    // ENCODING CAN MESSAGE
-    data[0] = 0xA2;
-    data[1] = 0x00;
-    data[2] = 0x00;
-    data[3] = 0x00;  
-    data[4] = joint_velocity & 0xFF;
-    data[5] = (joint_velocity >> 8) & 0xFF;
-    data[6] = (joint_velocity >> 16) & 0xFF;
-    data[7] = (joint_velocity >> 24) & 0xFF;
+      if(DEBUG_MODE == 1) {
+        RCLCPP_INFO(rclcpp::get_logger("StepperHardwareInterface"), "Writing velocities for: %s Joint velocity of motor (0.01 dps): %d", 
+                                                        info_.joints[i].name.c_str(),
+                                                        joint_velocity);
+      }
+      
+      // ENCODING CAN MESSAGE
+      data[0] = 0x40;
+      data[1] = operating_velocity & 0xFF;
+      data[2] = (operating_velocity >> 8) & 0xFF;
+      data[3] = (operating_velocity >> 16) & 0xFF;
+      data[4] = (operating_velocity >> 24) & 0xFF;
+    
+    }
+    else {
+      // RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Joint command value not found or undefined command state");
+    }
 
     // Cast data to uint8_t
     for(int j = 0; j < 8; j++){
@@ -365,6 +411,57 @@ hardware_interface::return_type stepper_ros2_control::STEPPERHardwareInterface::
 
   return hardware_interface::return_type::OK;
 }
+
+// hardware_interface::return_type STEPPERHardwareInterface::perform_command_mode_switch(
+//   const std::vector<std::string>& start_interfaces,
+//   const std::vector<std::string>& stop_interfaces)
+// {
+//   std::vector<integration_level_t> new_modes = {};
+//   for (std::string key : start_interfaces)
+//   {
+//     for (int i = 0; i < num_joints; i++){
+//       if (key == info_.joints[i].name + "/" + hardware_interface::HW_IF_POSITION){
+//         new_modes.push_back(integration_level_t::POSITION);
+//       }
+//       if (key == info_.joints[i].name + "/" + hardware_interface::HW_IF_VELOCITY){
+//         new_modes.push_back(integration_level_t::VELOCITY);
+//       }
+//     }
+//   }
+//   // All joints must be given new command mode at the same time
+//   // if (new_modes.size() != static_cast<unsigned long>(num_joints)){
+//   //   return hardware_interface::return_type::ERROR;
+//   // }
+//   // All joints must have the same command mode
+//   // if (!std::all_of(
+//   //       new_modes.begin() + 1, new_modes.end(),
+//   //       [&](integration_level_t mode) { return mode == new_modes[0]; }))
+//   // {
+//   //   return hardware_interface::return_type::ERROR;
+//   // }
+
+//   // Stop motion on all relevant joints that are stopping
+//   for (std::string key : stop_interfaces) {
+//     for (int i = 0; i < num_joints; i++) {
+//       if (key.find(info_.joints[i].name) != std::string::npos) {
+//         // fix this
+//         joint_command_position_[i] = initial_position_[i];
+//         joint_command_velocity_[i] = 0;
+//         control_level_[i] = integration_level_t::UNDEFINED;  // Revert to undefined
+//       }
+//     }
+//   }
+//   // Set the new command modes. By this point everything should be undefined after the "stop motion" loop
+//   for (int i = 0; i < num_joints; i++) {
+//     if (control_level_[i] != integration_level_t::UNDEFINED) {
+//       // Something else is using the joint! Abort!
+//       return hardware_interface::return_type::ERROR;
+//     }
+//     control_level_[i] = new_modes[i];
+//   }
+
+//   return hardware_interface::return_type::OK;
+// }
 
 hardware_interface::return_type STEPPERHardwareInterface::perform_command_mode_switch(
   const std::vector<std::string>& start_interfaces,
@@ -452,7 +549,7 @@ hardware_interface::return_type STEPPERHardwareInterface::perform_command_mode_s
 }
 
 
-}  // namespace stepper_hardware_interface
+}  // namespace stepper_ros2_control
 
 #include "pluginlib/class_list_macros.hpp"
 

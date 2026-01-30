@@ -38,7 +38,9 @@
 #include <rclcpp/node.hpp>
 #include <rclcpp/publisher.hpp>
 #include <rclcpp/subscription.hpp>
-#include "msgs/msg/cana.hpp"
+
+#include "umdloop_can_library/SocketCanBus.hpp"
+#include "umdloop_can_library/CanFrame.hpp"
 
 namespace stepper_ros2_control
 {
@@ -84,6 +86,8 @@ public:
   hardware_interface::return_type write(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
+  void onCanMessage(const CANLib::CanFrame& frame);
+
   // Helper Functions
   double calculate_joint_position_from_motor_position(double motor_position, int gear_ratio);
   double calculate_joint_velocity_from_motor_velocity(double motor_velocity, int gear_ratio);
@@ -94,6 +98,12 @@ public:
 private:
 
   int num_joints;
+  int update_rate;
+  double elapsed_update_time;
+  std::string can_interface;
+
+  int can_command_id;
+  int can_response_id;
 
 
   // EXPERIMENTING
@@ -108,19 +118,24 @@ private:
   std::vector<double> joint_command_velocity_;
 
   double encoder_position;
-  double motor_velocity;
-  double motor_position;
+  std::vector<double> motor_velocity;
+  std::vector<double> motor_position;
   std::vector<double> rated_max;
+  std::vector<int> device_status;
 
   std::vector<bool> joint_initialization_;
 
   CANLib::SocketCanBus canBus;
   CANLib::CanFrame can_tx_frame_;
+  CANLib::CanFrame can_rx_frame_;
 
   std::vector<int> joint_node_ids;
   std::vector<int> joint_gear_ratios;
 
-
+  // Heartbeat Tracking
+  double heartbeat_period_;
+  double heartbeat_elapsed_;
+  bool heartbeat_enabled_;
 
   enum class integration_level_t : std::uint8_t
   {
