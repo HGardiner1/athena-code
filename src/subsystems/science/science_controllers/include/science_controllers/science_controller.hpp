@@ -133,7 +133,6 @@ private:
     double auger_cmd
     //double auger_spinner_cmd
     );
-  };
 
   static constexpr double max_lift_velocity = 1.0;
   static constexpr double max_stepper_velocity = 1.0;
@@ -169,8 +168,10 @@ private:
     CMD_ITFS_COUNT // total number of command interfaces
   };
 
-  
 };
+
+  
+}
 
 // namespace science_controllers
 

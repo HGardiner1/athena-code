@@ -45,7 +45,6 @@ joint_group_position_controller:
       #- talon_scoop
       - scoop_a
       - scoop_b
-
       - auger
       - cap
     interface_name: position
@@ -57,7 +56,6 @@ joint_group_velocity_controller:
       - stepper_motor_b
       #- talon_lift
       #- talon_scoop
-      - auger
       - scoop_a
       - scoop_b
       - auger
