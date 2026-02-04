@@ -136,7 +136,6 @@ private:
     double rack_right_cmd
     //double auger_spinner_cmd
     );
-  };
 
   static constexpr double max_lift_velocity = 1.0;
   static constexpr double max_stepper_velocity = 1.0;
@@ -193,6 +192,8 @@ private:
 
   
 };
+
+}
 
 // namespace science_controllers
 
