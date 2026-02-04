@@ -80,19 +80,20 @@ science_manual:
 
   talon_lift:
     type: string_array
-    default_value: []
-    description: "Lift Talon motors (optional)"
-    read_only: false       # allow overriding
+    default_value: ["talon_lift"]
+    description: "The Talon motor controller for the lift (2 motors)"
+    read_only: true
     validation:
       unique<>: null
-      # not_empty deleted
+      not_empty<>: null
 
   talon_scoop:
     type: string
-    default_value: ""
-    description: "(Optional)"
-    read_only: false
-    # no validation
+    default_value: "talon_scoop"
+    description: "Scoop Talon motor controller"
+    read_only: true
+    validation:
+      not_empty<>: null
 
   scoop_servos:
     type: string_array
@@ -108,6 +109,22 @@ science_manual:
     default_value: ""
     description: "(Optional)"
     read_only: false
+
+  rack_and_pinion_left:
+    type: string
+    default_value: "rack_and_pinion_left"
+    description: "The Servo motor controller for the left-sided rack and pinion"
+    read_only: true
+    validation:
+      not_empty<>: null
+
+  rack_and_pinion_right:
+    type: string
+    default_value: "rack_and_pinion_right"
+    description: "The Servo motor controller for the right-sided rack and pinion"
+    read_only: true
+    validation:
+      not_empty<>: null
 
   auger:
     type: string

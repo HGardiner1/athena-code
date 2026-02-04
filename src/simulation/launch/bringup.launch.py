@@ -1,8 +1,10 @@
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, ExecuteProcess, TimerAction
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
 
 ARGUMENTS = [
     DeclareLaunchArgument(
@@ -29,8 +31,20 @@ ARGUMENTS = [
     ),
     DeclareLaunchArgument(
         'world_name',
-        default_value='default',  
+        default_value='default',
         description='Name of the world inside Gazebo'
+    ),
+    DeclareLaunchArgument(
+        'publish_ground_truth_tf',
+        default_value='false',
+        choices=['true', 'false'],
+        description='Publish ground truth odom -> base_link transform'
+    ),
+    DeclareLaunchArgument(
+    	'rqt', 
+        default_value='false',
+        choices=['true', 'false'],
+        description='Open RQt.'
     ),
 ]
 
@@ -38,19 +52,20 @@ def generate_launch_description():
     pkg_sim = get_package_share_directory('simulation')
 
     gazebo_launch = PathJoinSubstitution(
-        [pkg_sim, 'launch', 'gz_sim.launch.py'])
+        [pkg_sim, 'launch', 'gz_sim.launch.py'])	
     robot_spawn_launch = PathJoinSubstitution(
         [pkg_sim, 'launch', 'spawn.launch.py'])
     bridge_launch = PathJoinSubstitution(
         [pkg_sim, 'launch', 'bridge.launch.py'])
     control_launch = PathJoinSubstitution(
         [pkg_sim, 'launch', 'control.launch.py'])
+    ground_truth_tf_launch = PathJoinSubstitution(
+        [pkg_sim, 'launch', 'ground_truth_tf.launch.py'])
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([gazebo_launch]),
         launch_arguments=[
-            ('use_sim_time', LaunchConfiguration('use_sim_time')),
-            ('world', LaunchConfiguration('world'))
+            ('world', LaunchConfiguration('world')),                    # World file taken from description/worlds/
         ]
     )
 
@@ -72,9 +87,15 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([control_launch])
     )
 
+    ground_truth_tf = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([ground_truth_tf_launch]),
+        condition=IfCondition(LaunchConfiguration('publish_ground_truth_tf'))
+    )
+
     ld = LaunchDescription(ARGUMENTS)
     ld.add_action(gazebo)
     ld.add_action(robot_spawn)
     ld.add_action(bridge)
     ld.add_action(control)
+    ld.add_action(ground_truth_tf)
     return ld

@@ -9,7 +9,7 @@ def generate_launch_description():
             name='imu_bridge',
             output='screen',
             arguments=[
-                '/imu@sensor_msgs/msg/Imu@gz.msgs.IMU',
+                '/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
             ],
         ),
 
@@ -26,10 +26,31 @@ def generate_launch_description():
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
+            name='depth_camera_bridge',
+            output='screen',
+            arguments=[
+                '/depth_camera@sensor_msgs/msg/Image@gz.msgs.Image',
+                '/depth_camera/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
+            ],
+        ),
+
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
             name='clock_bridge',
             output='screen',
             arguments=[
-                '/clock@rosgraph_msgs/msg/Clock@gz.msgs.Clock',
+                '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
+            ]
+        ),
+
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            name='ground_truth_odom_bridge',
+            output='screen',
+            arguments=[
+                '/odom/ground_truth@nav_msgs/msg/Odometry@gz.msgs.Odometry',
             ]
         ),
     ])

@@ -100,8 +100,9 @@ protected:
 
   std::vector<std::string> state_joints_;
   std::vector<std::string> stepper_joints_;
-  //std::vector<std::string> talon_joints_;
+  std::vector<std::string> talon_joints_;
   std::vector<std::string> servo_joints_;
+  std::vector<std::string> rack_pinion_joints_;
   //std::string auger_spinner_;
 
   // Command subscribers and Controller State publisher
@@ -127,10 +128,12 @@ private:
   void load_velocity_limits();  // called in on_configure()
 
   void send_commands(
-    //double lift_cmd,
+    double lift_cmd,
     double stepper_cmd,
     double scoop_cmd,
-    double auger_cmd
+    double auger_cmd,
+    double rack_left_cmd,
+    double rack_right_cmd
     //double auger_spinner_cmd
     );
   };
@@ -139,11 +142,13 @@ private:
   static constexpr double max_stepper_velocity = 1.0;
   static constexpr double scoop_talon_velocity = 1.0;
   static constexpr double auger_velocity = 1.0;
-
+  
   // Closed = 0, Open = 1
   double scoop_position = 0;
   double auger_position = 0;
   double cap_position = 0;
+  double rack_left_position = 0.0;
+  double rack_right_position = 0.0;
 
   /*enum CommandInterfaces
   {
@@ -160,13 +165,30 @@ private:
 
   enum CommandInterfaces
   {
+    // ----- Steppers (position control) -----
     IDX_STEPPER_A_POSITION = 0,
     IDX_STEPPER_B_POSITION = 1,
-    IDX_SCOOP_A_POSITION   = 2,
-    IDX_SCOOP_B_POSITION   = 3,
-    IDX_AUGER_POSITION     = 4,
-    IDX_CAP_POSITION       = 5,
-    CMD_ITFS_COUNT // total number of command interfaces
+
+    // ----- Talons (velocity control) -----
+    IDX_LIFT_TALON_VELOCITY = 2,
+    IDX_SCOOP_TALON_VELOCITY = 3,
+
+    // ----- Scoop servos (position) -----
+    IDX_SCOOP_A_POSITION = 4,
+    IDX_SCOOP_B_POSITION = 5,
+
+    // ----- Auger servo -----
+    IDX_AUGER_POSITION = 6,
+
+    // ----- Cap servo -----
+    IDX_CAP_POSITION = 7,
+
+    // ----- Rack and Pinion servos -----
+    IDX_RACK_LEFT_POSITION  = 8,
+    IDX_RACK_RIGHT_POSITION = 9,
+    
+    // Total number of interfaces
+    CMD_ITFS_COUNT
   };
 
   
