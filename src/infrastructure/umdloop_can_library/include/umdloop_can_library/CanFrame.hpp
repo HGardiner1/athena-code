@@ -1,5 +1,8 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
+
 namespace CANLib {
 
     struct CanFrame {

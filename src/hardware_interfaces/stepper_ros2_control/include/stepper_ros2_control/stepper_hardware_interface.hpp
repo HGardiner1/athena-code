@@ -1,4 +1,4 @@
-// Copyright (c) 2021, Stogl Robotics Consulting UG (haftungsbeschränkt)
+// Copyright (c) 2024 UMD Loop
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,20 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-//
-// Authors: Denis Stogl
 //
 
 #ifndef STEPPER_HARDWARE_INTERFACE_HPP_
 #define STEPPER_HARDWARE_INTERFACE_HPP_
 
-#include <netinet/in.h>
 #include <memory>
 #include <string>
 #include <vector>
 #include <cstdint>
-
 
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
@@ -34,30 +29,24 @@
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 
-
-#include <rclcpp/node.hpp>
-#include <rclcpp/publisher.hpp>
-#include <rclcpp/subscription.hpp>
-#include "msgs/msg/cana.hpp"
+// Real-time CAN communication library
+#include <array>
+#include "umdloop_can_library/SocketCanBus.hpp"
 
 namespace stepper_ros2_control
 {
-class STEPPERHardwareInterface : public hardware_interface::SystemInterface // Inheriting from System Interface
+class STEPPERHardwareInterface : public hardware_interface::SystemInterface
 {
 public:
   RCLCPP_SHARED_PTR_DEFINITIONS(STEPPERHardwareInterface)
 
-  // Initialization, so reading parameters, initializing variables, checking if all the joint state and command interfaces are correct
   hardware_interface::CallbackReturn on_init(
     const hardware_interface::HardwareInfo & info) override;
 
-  // Exports/exposes Interfaces that are available so that the controllers
-  // know what to read and write to
   std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
 
   std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
 
-  // Lifecycle
   hardware_interface::CallbackReturn on_configure(
     const rclcpp_lifecycle::State & previous_state) override;
 
@@ -84,49 +73,52 @@ public:
   hardware_interface::return_type write(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
+private:
+  // CAN callback for receiving messages
+  void onCanMessage(const CANLib::CanFrame& frame);
+
   // Helper Functions
   double calculate_joint_position_from_motor_position(double motor_position, int gear_ratio);
   double calculate_joint_velocity_from_motor_velocity(double motor_velocity, int gear_ratio);
-
   int32_t calculate_motor_position_from_desired_joint_position(double joint_position, int gear_ratio);
   int32_t calculate_motor_velocity_from_desired_joint_velocity(double joint_velocity, int gear_ratio);
 
-private:
-
   int num_joints;
 
-
-  // EXPERIMENTING
-  std::vector<double> initial_position_;
-
-  // Store the state for the simulated robot
+  // Store the state for the robot
   std::vector<double> joint_state_position_;
   std::vector<double> joint_state_velocity_;
   
-  // Store the command for the simulated robot
+  // Store the command for the robot
   std::vector<double> joint_command_position_;
   std::vector<double> joint_command_velocity_;
 
-  double encoder_position;
-  double motor_velocity;
-  double motor_position;
+  // Motor state from CAN (per joint)
+  std::vector<double> motor_position;
+  std::vector<double> motor_velocity;
+  std::vector<double> rated_max;
 
-  std::vector<bool> joint_initialization_;
+  // CAN communication
+  CANLib::SocketCanBus canBus_;
+  CANLib::CanFrame can_tx_frame_;
+  CANLib::CanFrame can_rx_frame_;
+  bool can_connected_;
+  double is_connected_;  // State interface for connection status
 
-  rclcpp::Publisher<msgs::msg::CANA>::SharedPtr science_can_publisher_;
-  rclcpp::Subscription<msgs::msg::CANA>::SharedPtr science_can_subscriber_;
-  rclcpp::Node::SharedPtr node_;
-  uint16_t current_iteration;
-
-
-  msgs::msg::CANA received_joint_data_;
-
+  // Joint parameters
+  std::vector<int> joint_node_ids;
   std::vector<int> joint_gear_ratios;
-  std::vector<int> joint_orientation;
+  std::vector<std::string> joint_type_;
 
+  // Hardware parameters
+  std::string can_interface_;
+  uint32_t can_command_id_;
+  uint32_t can_response_id_;
+  int update_rate_;
+  double elapsed_update_time_ = 0.0;
+  int current_joint_ = 0;
 
-
-  enum integration_level_t : std::uint8_t
+  enum class integration_level_t : std::uint8_t
   {
     UNDEFINED = 0,
     POSITION = 1,
@@ -135,7 +127,6 @@ private:
 
   // Active control mode for each actuator
   std::vector<integration_level_t> control_level_;
-
 };
 
 }  // namespace stepper_ros2_control
