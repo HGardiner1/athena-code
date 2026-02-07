@@ -31,7 +31,12 @@
 
 // Real-time CAN communication library
 #include <array>
+#include <rclcpp/node.hpp>
+#include <rclcpp/publisher.hpp>
+#include <rclcpp/subscription.hpp>
+
 #include "umdloop_can_library/SocketCanBus.hpp"
+#include "umdloop_can_library/CanFrame.hpp"
 
 namespace stepper_ros2_control
 {
@@ -84,6 +89,12 @@ private:
   int32_t calculate_motor_velocity_from_desired_joint_velocity(double joint_velocity, int gear_ratio);
 
   int num_joints;
+  int update_rate;
+  double elapsed_update_time;
+  std::string can_interface;
+
+  int can_command_id;
+  int can_response_id;
 
   // Store the state for the robot
   std::vector<double> joint_state_position_;

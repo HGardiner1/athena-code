@@ -55,6 +55,10 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_init(
   }
 
   num_joints = static_cast<int>(info_.joints.size());
+  update_rate = std::stoi(info_.hardware_parameters.at("update_rate"));
+  can_interface = info_.hardware_parameters.at("can_interface");
+  can_command_id = std::stoi(info_.hardware_parameters.at("can_id"), nullptr, 0);
+  can_response_id = can_command_id+0x1;
 
   // Parse hardware parameters with defaults
   if (info_.hardware_parameters.count("update_rate")) {
@@ -89,6 +93,7 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_init(
   // Motor state storage (per joint)
   motor_position.assign(num_joints, 0.0);
   motor_velocity.assign(num_joints, 0.0);
+  device_status.assign(num_joints, 0);
 
   // Steppers default to velocity control
   control_level_.resize(num_joints, integration_level_t::VELOCITY);
@@ -106,6 +111,7 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_init(
 hardware_interface::CallbackReturn STEPPERHardwareInterface::on_configure(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
+
   RCLCPP_INFO(
     rclcpp::get_logger("STEPPERHardwareInterface"),
     "Configuring stepper hardware...");
@@ -252,6 +258,7 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_activate(
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
+
 hardware_interface::CallbackReturn STEPPERHardwareInterface::on_deactivate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
@@ -282,6 +289,7 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_deactivate(
 hardware_interface::CallbackReturn STEPPERHardwareInterface::on_cleanup(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
+
   RCLCPP_INFO(
     rclcpp::get_logger("STEPPERHardwareInterface"),
     "Cleaning up stepper hardware...");
@@ -314,6 +322,7 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_cleanup(
 hardware_interface::CallbackReturn STEPPERHardwareInterface::on_shutdown(
   const rclcpp_lifecycle::State & previous_state)
 {
+
   RCLCPP_INFO(
     rclcpp::get_logger("STEPPERHardwareInterface"),
     "Shutting down stepper hardware...");
@@ -352,6 +361,7 @@ int32_t STEPPERHardwareInterface::calculate_motor_velocity_from_desired_joint_ve
 hardware_interface::return_type STEPPERHardwareInterface::read(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
+
   // Round-robin through joints to request status
   current_joint_ = (current_joint_ + 1) % num_joints;
   
@@ -370,6 +380,7 @@ hardware_interface::return_type STEPPERHardwareInterface::read(
     // Update joint state from motor state (populated by onCanMessage callback)
     joint_state_velocity_[i] = motor_velocity[i];
     joint_state_position_[i] = motor_position[i];
+
   }
 
   return hardware_interface::return_type::OK;

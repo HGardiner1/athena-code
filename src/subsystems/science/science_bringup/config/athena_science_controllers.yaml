@@ -62,9 +62,10 @@ joint_group_velocity_controller:
       - stepper_motor_b
       - talon_lift
       - talon_scoop
-      - auger
       - rack_and_pinion_left
       - rack_and_pinion_right
+      #- talon_lift
+      #- talon_scoop
       - scoop_a
       - scoop_b
       - auger
