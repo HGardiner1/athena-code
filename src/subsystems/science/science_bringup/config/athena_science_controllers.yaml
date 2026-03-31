@@ -31,10 +31,10 @@ joint_group_position_controller:
       - servo_rack_and_pinion_r
       - servo_scoop_a
       - servo_scoop_b
-      - talon_scoop
+      - dc_scoop
       - servo_sampler_lift_l
       - servo_sampler_lift_l
-      - talon_auger
+      - dc_auger
       - servo_auger_lift
     interface_name: position
 
@@ -47,10 +47,10 @@ joint_group_velocity_controller:
       - servo_rack_and_pinion_r
       - servo_scoop_a
       - servo_scoop_b
-      - talon_scoop
+      - dc_scoop
       - servo_sampler_lift_l
       - servo_sampler_lift_r
-      - talon_auger
+      - dc_auger
       - servo_auger_lift
     interface_name: velocity
 
@@ -66,12 +66,12 @@ science_controller:
     
     # Scoops
     scoop_servos: ["servo_scoop_a", "servo_scoop_b"]
-    scoop_spinner: "talon_scoop"
+    scoop_spinner: "dc_scoop"
 
     # Sampler
     sampler_lift_l: "servo_sampler_lift_l"
     sampler_lift_r: "servo_sampler_lift_r"
-    auger_spinner: "talon_auger"
+    auger_spinner: "dc_auger"
     cap: "servo_auger_lift"
     interface_name: position 
     command_interfaces: [position, velocity]
@@ -98,8 +98,8 @@ motor_status_broadcaster:
     joints:
       - stepper_motor_a
       - stepper_motor_b
-      - talon_lift
-      - talon_scoop
+      - dc_lift
+      - dc_scoop
     interfaces:
       - motor_temperature
       - torque_current

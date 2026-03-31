@@ -6,8 +6,9 @@
 
   <xacro:include filename="$(find description)/ros2_control/science/science.mock.ros2_control.xacro"/>
 
-  <xacro:include filename="$(find description)/ros2_control/science/science.stepper.ros2_control.xacro" />
-  <xacro:include filename="$(find description)/ros2_control/science/science.servo.ros2_control.xacro" />
+  <xacro:include filename="$(find description)/ros2_control/science/science.stepper.ros2_control.xacro"/>
+  <xacro:include filename="$(find description)/ros2_control/science/science.servo.ros2_control.xacro"/>
+  <xacro:include filename="$(find description)/ros2_control/science/science.dc.ros2_control.xacro"/>
   <xacro:include filename="$(find description)/ros2_control/science/science.talon.ros2_control.xacro"/>
   <xacro:include filename="$(find description)/ros2_control/science/science.laser.ros2_control.xacro"/>
   
@@ -29,6 +30,9 @@
 
     <!-- Import servo ros2_control description -->
     <xacro:servo_ros2_control name="servo"/>
+
+    <!-- Import dc ros2_control description -->
+    <xacro:dc_ros2_control name="dc"/>
 
     <!-- Import talon ros2_control description -->
     <xacro:talon_ros2_control name="talon"/>
