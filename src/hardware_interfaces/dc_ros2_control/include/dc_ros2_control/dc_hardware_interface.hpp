@@ -162,6 +162,13 @@ private:
   static constexpr uint8_t MOTOR_STATUS_CMD          = 0x50;
   static constexpr uint8_t MAINTENANCE_CMD           = 0x60;
   static constexpr uint8_t DC_SPECS_CMD              = 0x70;
+
+  // DC Motor Maintenance Sub-Commands
+  static constexpr uint8_t MAINTENANCE_ZERO_ROM      = 0;
+  static constexpr uint8_t MAINTENANCE_REQ_VECTORS   = 1;
+  static constexpr uint8_t MAINTENANCE_STOP          = 2;
+  static constexpr uint8_t MAINTENANCE_SHUTDOWN      = 3;
+  static constexpr uint8_t MAINTENANCE_CLEAR_ERRORS  = 4;
 };
 
 }  // namespace dc_ros2_control

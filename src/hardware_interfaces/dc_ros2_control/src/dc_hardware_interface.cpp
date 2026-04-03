@@ -298,13 +298,19 @@ hardware_interface::CallbackReturn DCHardwareInterface::on_cleanup(
 {
   RCLCPP_INFO(rclcpp::get_logger("DCHardwareInterface"), "Cleaning up... please wait...");
 
+  // Stop worker thread if running
+  is_running.store(false);
+  if (worker.joinable()) {
+    worker.join();
+  }
+
   // Send shutdown command (maintenance sub-command 3) to all joints
   for (int i = 0; i < num_joints; i++) {
     can_tx_frame_ = CANLib::CanFrame();
     can_tx_frame_.id = can_command_id;
     can_tx_frame_.dlc = 2;
     can_tx_frame_.data[0] = MAINTENANCE_CMD + (joint_node_ids[i] & 0x0F);
-    can_tx_frame_.data[1] = 3; // DC Motor: Shutdown
+    can_tx_frame_.data[1] = MAINTENANCE_SHUTDOWN;
     canBus.send(can_tx_frame_);
   }
 
@@ -341,7 +347,7 @@ hardware_interface::CallbackReturn DCHardwareInterface::on_deactivate(
     can_tx_frame_.id = can_command_id;
     can_tx_frame_.dlc = 2;
     can_tx_frame_.data[0] = MAINTENANCE_CMD + (joint_node_ids[i] & 0x0F);
-    can_tx_frame_.data[1] = 2; // DC Motor: Stop
+    can_tx_frame_.data[1] = MAINTENANCE_STOP;
     canBus.send(can_tx_frame_);
   }
 
