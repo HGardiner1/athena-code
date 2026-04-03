@@ -298,12 +298,6 @@ hardware_interface::CallbackReturn DCHardwareInterface::on_cleanup(
 {
   RCLCPP_INFO(rclcpp::get_logger("DCHardwareInterface"), "Cleaning up... please wait...");
 
-  // Stop worker thread if running
-  is_running.store(false);
-  if (worker.joinable()) {
-    worker.join();
-  }
-
   // Send shutdown command (maintenance sub-command 3) to all joints
   for (int i = 0; i < num_joints; i++) {
     can_tx_frame_ = CANLib::CanFrame();
