@@ -21,20 +21,29 @@ def generate_launch_description():
     localizer_launch_file = os.path.join(localizer_share, 'launch', 'localizer.launch.py')
     zed_tf_publisher_launch_file = os.path.join(localizer_share, 'launch', 'zed_tf_publisher.launch.py')
 
-    gps_goal_share = get_package_share_directory('gps_goal')
-    gps_goal_launch_file = os.path.join(gps_goal_share, 'launch', 'gps_goal_server.launch.py')
+    # gps_goal_share = get_package_share_directory('gps_goal')
+    # gps_goal_launch_file = os.path.join(gps_goal_share, 'launch', 'gps_goal_server.launch.py')
 
     sensors_share = get_package_share_directory('athena_sensors')
     sensors_launch_file = os.path.join(sensors_share, 'launch', 'sensors.launch.py')
 
-    aruco_bt_share = get_package_share_directory('aruco_bt')
-    aruco_launch_file = os.path.join(aruco_bt_share, 'launch', 'aruco.launch.py')
+    # aruco_bt_share = get_package_share_directory('aruco_bt')
+    # aruco_launch_file = os.path.join(aruco_bt_share, 'launch', 'aruco.launch.py')
 
     default_params = PathJoinSubstitution([
         FindPackageShare('athena_planner'), 'config', 'nav2_params.yaml'
     ])
+    minimal_params = PathJoinSubstitution([
+        FindPackageShare('athena_planner'), 'config', 'nav2_params_minimal.yaml'
+    ])
 
     sim = LaunchConfiguration('sim')
+    use_minimal = LaunchConfiguration('use_minimal')
+
+    selected_params = PythonExpression([
+        "'", minimal_params, "' if '", use_minimal, "' == 'true' else '", default_params, "'"
+    ])
+
     params_file = LaunchConfiguration('params_file')
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
@@ -82,15 +91,15 @@ def generate_launch_description():
         }.items(),
     )
 
-    aruco_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(aruco_launch_file),
-        launch_arguments={'use_sim_time': sim, 'marker_size': '0.20'}.items()
-    )
+    # aruco_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(aruco_launch_file),
+    #     launch_arguments={'use_sim_time': sim, 'marker_size': '0.20'}.items()
+    # )
 
-    gps_goal_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(gps_goal_launch_file),
-        launch_arguments={'use_sim_time': sim}.items(),
-    )
+    # gps_goal_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(gps_goal_launch_file),
+    #     launch_arguments={'use_sim_time': sim}.items(),
+    # )
 
     point_cloud_filterer_sim = Node(
         package='point_cloud_filterer',
@@ -129,7 +138,12 @@ def generate_launch_description():
             description='Set true when running in Gazebo simulation (enables sim time and sensor bridges)',
         ),
         DeclareLaunchArgument(
-            'params_file', default_value=default_params,
+            'use_minimal', default_value='false',
+            choices=['true', 'false'],
+            description='Use minimal Nav2 config for ackermann testing (empty costmaps, basic BT)',
+        ),
+        DeclareLaunchArgument(
+            'params_file', default_value=selected_params,
             description='Full path to the Nav2 params YAML',
         ),
         DeclareLaunchArgument('map_frame', default_value='map'),
@@ -156,10 +170,10 @@ def generate_launch_description():
         localizer_launch,
         zed_tf_publisher_launch,
         sensors_launch,
-        aruco_launch,
+        # aruco_launch,
         point_cloud_filterer_sim,
         point_cloud_relay,
-        gps_goal_launch,
+        # gps_goal_launch,
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_nav),
