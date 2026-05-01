@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef LASER_ROS2_CONTROL__LASER_HARDWARE_INTERFACE_HPP_
-#define LASER_ROS2_CONTROL__LASER_HARDWARE_INTERFACE_HPP_
+#ifndef SENSOR_DIODE_ROS2_CONTROL__SENSOR_DIODE_HARDWARE_INTERFACE_HPP_
+#define SENSOR_DIODE_ROS2_CONTROL__SENSOR_DIODE_HARDWARE_INTERFACE_HPP_
 
 #include <memory>
 #include <string>
@@ -33,35 +33,20 @@
 #include "umdloop_can_library/SocketCanBus.hpp"
 #include "umdloop_can_library/CanFrame.hpp"
 
-namespace laser_ros2_control
+namespace sensor_diode_ros2_control
 {
 
 /**
- * @brief Hardware interface for CAN-controlled spectrometry laser via ros2_control
+ * @brief Hardware interface for CAN-controlled spectrometry sensor diode via ros2_control
  * 
- * This interface controls a spectrometry laser through CAN bus.
+ * This interface controls a spectrometry sensor_diode through CAN bus.
  * 
- * CAN Protocol (ID: 0x130):
- * - ON:  DATA[0] = 0x20 + port_id, DATA[1] = 0x01
- * - OFF: DATA[0] = 0x20 + port_id, DATA[1] = 0x00
- * - Status: DATA[0] = 0x30 + port_id, DATA[1] = 0x01
- * 
- * State Interfaces (read by controllers):
- * - laser_state: 0.0 = OFF, 1.0 = ON
- * - temperature: Laser temperature (if available)
- * - is_connected: Is CAN connected (0.0 or 1.0)
- * 
- * Command Interfaces (written by controllers):
- * - laser_command: 0.0 = turn OFF, 1.0 = turn ON
- * 
- * Hardware Parameters (from URDF):
- * - can_interface: CAN interface name (default: "can0")
- * - can_id: CAN ID for laser commands (default: 0x130)
- */
-class LaserHardwareInterface : public hardware_interface::SystemInterface
+**/
+
+class SensorDiodeHardwareInterface : public hardware_interface::SystemInterface
 {
 public:
-  RCLCPP_SHARED_PTR_DEFINITIONS(LaserHardwareInterface)
+  RCLCPP_SHARED_PTR_DEFINITIONS(SensorDiodeHardwareInterface)
 
   hardware_interface::CallbackReturn on_init(
     const hardware_interface::HardwareInfo & info) override;
@@ -100,27 +85,27 @@ private:
   // Configuration parameters
   std::string can_interface_;
   uint32_t can_id_;
+  uint8_t port_id_;
 
   // CAN bus
   CANLib::SocketCanBus canBus_;
   CANLib::CanFrame can_tx_frame_;
   bool can_connected_;
 
-  // State variables (hardware → ros2_control)
-  double laser_state_;      // Current state: 0.0 = OFF, 1.0 = ON
-  double is_connected_;     // CAN connected status
+  // State variables (hardware -> ros2_control)
+  double is_connected_;
+  double command_success_;
+  double wavelength_intensity_;
 
-  // Command variables (ros2_control → hardware)
-  double laser_command_;    // Commanded state
+  // Command variables (ros2_control -> hardware)
+  double request_measurement_cmd_;
+
+  bool awaiting_response_;
 
   // CAN command bytes
-  static constexpr uint8_t CMD_LASER_CONTROL = 0x20;  // + port_id
-  static constexpr uint8_t CMD_LASER_STATUS  = 0x30;  // + port_id
-
-  // Port ID for this laser instance
-  uint8_t port_id_;
+  static constexpr uint8_t CMD_READ_DIODE_VALUE = 0x20;
 };
 
-}  // namespace laser_ros2_control
+}  // namespace sensor_diode_ros2_control
 
-#endif  // LASER_ROS2_CONTROL__LASER_HARDWARE_INTERFACE_HPP_
+#endif  // SENSOR_DIODE_ROS2_CONTROL__SENSOR_DIODE_HARDWARE_INTERFACE_HPP_

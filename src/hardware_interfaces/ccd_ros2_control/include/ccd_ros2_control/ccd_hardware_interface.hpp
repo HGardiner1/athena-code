@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef LASER_ROS2_CONTROL__LASER_HARDWARE_INTERFACE_HPP_
-#define LASER_ROS2_CONTROL__LASER_HARDWARE_INTERFACE_HPP_
+#ifndef CCD_ROS2_CONTROL__CCD_HARDWARE_INTERFACE_HPP_
+#define CCD_ROS2_CONTROL__CCD_HARDWARE_INTERFACE_HPP_
 
 #include <memory>
 #include <string>
@@ -33,35 +33,36 @@
 #include "umdloop_can_library/SocketCanBus.hpp"
 #include "umdloop_can_library/CanFrame.hpp"
 
-namespace laser_ros2_control
+namespace ccd_ros2_control
 {
 
 /**
- * @brief Hardware interface for CAN-controlled spectrometry laser via ros2_control
+ * @brief Hardware interface for CAN-controlled spectrometry ccd via ros2_control
  * 
- * This interface controls a spectrometry laser through CAN bus.
+ * This interface controls a spectrometry ccd through CAN bus.
  * 
- * CAN Protocol (ID: 0x130):
- * - ON:  DATA[0] = 0x20 + port_id, DATA[1] = 0x01
- * - OFF: DATA[0] = 0x20 + port_id, DATA[1] = 0x00
- * - Status: DATA[0] = 0x30 + port_id, DATA[1] = 0x01
+ * CAN Protocol (ID: 0x100):
+ * - ON:  DATA[0] = 0x60
+ * - OFF: DATA[0] = 0x80
+ * - Read Temperature: DATA[0] = 0x85
+ * - Read Wavelength:  DATA[0] = 0x90
  * 
  * State Interfaces (read by controllers):
- * - laser_state: 0.0 = OFF, 1.0 = ON
- * - temperature: Laser temperature (if available)
+ * - ccd_state: 0.0 = OFF, 1.0 = ON
+ * - temperature: Ccd temperature (if available)
  * - is_connected: Is CAN connected (0.0 or 1.0)
  * 
  * Command Interfaces (written by controllers):
- * - laser_command: 0.0 = turn OFF, 1.0 = turn ON
+ * - ccd_command: 0.0 = turn OFF, 1.0 = turn ON
  * 
  * Hardware Parameters (from URDF):
  * - can_interface: CAN interface name (default: "can0")
- * - can_id: CAN ID for laser commands (default: 0x130)
+ * - can_id: CAN ID for ccd commands (default: 0x100)
  */
-class LaserHardwareInterface : public hardware_interface::SystemInterface
+class CCDHardwareInterface : public hardware_interface::SystemInterface
 {
 public:
-  RCLCPP_SHARED_PTR_DEFINITIONS(LaserHardwareInterface)
+  RCLCPP_SHARED_PTR_DEFINITIONS(CCDHardwareInterface)
 
   hardware_interface::CallbackReturn on_init(
     const hardware_interface::HardwareInfo & info) override;
@@ -106,21 +107,28 @@ private:
   CANLib::CanFrame can_tx_frame_;
   bool can_connected_;
 
-  // State variables (hardware → ros2_control)
-  double laser_state_;      // Current state: 0.0 = OFF, 1.0 = ON
-  double is_connected_;     // CAN connected status
+  // State variables (hardware -> ros2_control)
+  double is_connected_;
+  double command_success_;
+  double acquisition_in_progress_;
+  double data_ready_;
+  double frames_received_;
+  double last_frame_id_;
 
-  // Command variables (ros2_control → hardware)
-  double laser_command_;    // Commanded state
+  // Command variables (ros2_control -> hardware)
+  double capture_binary_cmd_;
+  double capture_byte_cmd_;
+
+  bool waiting_for_binary_data_;
+  bool waiting_for_byte_data_;
+  std::vector<uint8_t> binary_pixels_;
+  std::vector<uint8_t> byte_pixels_;
 
   // CAN command bytes
-  static constexpr uint8_t CMD_LASER_CONTROL = 0x20;  // + port_id
-  static constexpr uint8_t CMD_LASER_STATUS  = 0x30;  // + port_id
-
-  // Port ID for this laser instance
-  uint8_t port_id_;
+  static constexpr uint8_t CMD_REQUEST_BINARY = 0x20; // Request Binary (1-bit) Measurements
+  static constexpr uint8_t CMD_REQUEST_BYTE = 0x30; // Request 8-bit Measurements
 };
 
-}  // namespace laser_ros2_control
+}  // namespace ccd_ros2_control
 
-#endif  // LASER_ROS2_CONTROL__LASER_HARDWARE_INTERFACE_HPP_
+#endif  // CCD_ROS2_CONTROL__CCD_HARDWARE_INTERFACE_HPP_

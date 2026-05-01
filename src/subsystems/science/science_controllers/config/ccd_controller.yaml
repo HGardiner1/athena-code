@@ -1,0 +1,34 @@
+controller_manager:
+  ros__parameters:
+    ccd_controller:
+      type: science_controllers/CCDSnapshotController
+
+ccd_controller:
+  ros__parameters:
+    ccd_name: "spectrometry_ccd"
+
+    command_interfaces:
+      - capture_byte
+
+    state_interfaces:
+      - is_connected
+      - command_success
+      - acquisition_in_progress
+      - data_ready
+      - frames_received
+      - last_frame_id
+
+    snapshot_service_name: "~/request_snapshot"
+    status_publish_topic: "~/status"
+    snapshot_publish_topic: "~/snapshot"
+
+    publish_rate: 10.0
+    acquisition_timeout_sec: 5.0
+    expected_total_frames: 609
+
+    spectrometer_id: "pda_spectrometer"
+    integration_time_ms: 100.0
+    laser_wavelength_nm: 785.0
+    num_photodiodes: 3648
+    wavenumber_min: 200.0
+    wavenumber_max: 3500.0

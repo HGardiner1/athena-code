@@ -11,6 +11,8 @@
   <xacro:include filename="$(find description)/ros2_control/science/science.dc.ros2_control.xacro"/>
   <xacro:include filename="$(find description)/ros2_control/science/science.talon.ros2_control.xacro"/>
   <xacro:include filename="$(find description)/ros2_control/science/science.laser.ros2_control.xacro"/>
+  <xacro:include filename="$(find description)/ros2_control/science/science.ccd.ros2_control.xacro"/>
+  <xacro:include filename="$(find description)/ros2_control/science/science.sensor_diode.ros2_control.xacro"/>
   
   <!-- create link fixed to the "world" -->
   <link name="world"/>
@@ -35,10 +37,17 @@
     <xacro:dc_ros2_control name="dc"/>
 
     <!-- Import talon ros2_control description -->
-    <xacro:talon_ros2_control name="talon"/>
+    <!-- <xacro:talon_ros2_control name="talon"/> -->
 
     <!-- Import laser ros2_control description (CAN-based) -->
     <xacro:laser_ros2_control name="spectrometry_laser"/>
+
+    <!-- Import CCD ros2_control description (CAN-based) -->
+    <xacro:ccd_ros2_control name="spectrometry_ccd"/>
+
+    <!-- Import sensor diode ros2_control description (CAN-based) -->
+    <xacro:sensor_diode_ros2_control name="sensor_diode"/>
+
   </xacro:unless>
 
 </robot>

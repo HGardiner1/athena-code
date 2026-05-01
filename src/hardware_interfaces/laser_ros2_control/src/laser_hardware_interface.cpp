@@ -24,19 +24,16 @@ namespace laser_ros2_control
 hardware_interface::CallbackReturn LaserHardwareInterface::on_init(
   const hardware_interface::HardwareInfo & info)
 {
-  if (hardware_interface::SystemInterface::on_init(info) != 
+  if (hardware_interface::SystemInterface::on_init(info) !=
       hardware_interface::CallbackReturn::SUCCESS)
   {
     return hardware_interface::CallbackReturn::ERROR;
   }
 
-  // Initialize state variables
-  laser_state_ = 0.0;      // OFF
-  temperature_ = 0.0;
+  laser_state_ = 0.0;
   is_connected_ = 0.0;
-
-  // Initialize command variables
-  laser_command_ = 0.0;    // OFF
+  laser_command_ = 0.0;
+  can_connected_ = false;
 
   // Parse hardware parameters
   if (info_.hardware_parameters.count("can_interface")) {
@@ -46,18 +43,23 @@ hardware_interface::CallbackReturn LaserHardwareInterface::on_init(
   }
 
   if (info_.hardware_parameters.count("can_id")) {
-    // Parse hex string (e.g., "0x130") - base 0 auto-detects hex/decimal
-    can_id_ = static_cast<uint32_t>(std::stoul(info_.hardware_parameters.at("can_id"), nullptr, 0));
+    can_id_ = static_cast<uint32_t>(
+      std::stoul(info_.hardware_parameters.at("can_id"), nullptr, 0));
   } else {
-    can_id_ = 0x130;  // Default laser CAN ID
+    can_id_ = 0x130;
   }
 
-  can_connected_ = false;
+  if (info_.hardware_parameters.count("port_id")) {
+    port_id_ = static_cast<uint8_t>(
+      std::stoul(info_.hardware_parameters.at("port_id"), nullptr, 0));
+  } else {
+    port_id_ = 0;
+  }
 
   RCLCPP_INFO(
     rclcpp::get_logger("LaserHardwareInterface"),
-    "Initialized laser on CAN interface %s with ID 0x%X", 
-    can_interface_.c_str(), can_id_);
+    "Initialized laser on CAN interface %s with ID 0x%X and port ID %u",
+    can_interface_.c_str(), can_id_, port_id_);
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -69,13 +71,18 @@ hardware_interface::CallbackReturn LaserHardwareInterface::on_configure(
     rclcpp::get_logger("LaserHardwareInterface"),
     "Configuring laser hardware...");
 
-  // Open CAN bus
-  if (!canBus_.open(can_interface_, 
-      std::bind(&LaserHardwareInterface::onCanMessage, this, std::placeholders::_1))) 
+  if (can_connected_) {
+    canBus_.close();
+    can_connected_ = false;
+  }
+
+  if (!canBus_.open(
+        can_interface_,
+        std::bind(&LaserHardwareInterface::onCanMessage, this, std::placeholders::_1)))
   {
     RCLCPP_WARN(
       rclcpp::get_logger("LaserHardwareInterface"),
-      "Failed to open CAN interface %s - running in SIMULATION mode", 
+      "Failed to open CAN interface %s - running in SIMULATION mode",
       can_interface_.c_str());
     can_connected_ = false;
   } else {
@@ -94,37 +101,30 @@ hardware_interface::CallbackReturn LaserHardwareInterface::on_configure(
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-void LaserHardwareInterface::onCanMessage(const CANLib::CanFrame& frame)
+void LaserHardwareInterface::onCanMessage(const CANLib::CanFrame & frame)
 {
-  // Handle incoming CAN messages (e.g., temperature readings)
-  if (frame.id == can_id_) {
-    // Parse response based on command byte
-    if (frame.dlc > 0 && frame.data[0] == CMD_READ_TEMP) {
-      // Temperature response - parse if available
-      if (frame.dlc >= 2) {
-        temperature_ = static_cast<double>(frame.data[1]);
-      }
-    }
+  if (frame.id != can_id_ || frame.dlc < 2) {
+    return;
+  }
+
+  if (frame.data[0] == static_cast<uint8_t>(CMD_LASER_CONTROL + port_id_)) {
+    laser_state_ = frame.data[1] ? 1.0 : 0.0;
+    RCLCPP_INFO(
+      rclcpp::get_logger("LaserHardwareInterface"),
+      "Laser state confirmed from CAN: %s", laser_state_ > 0.5 ? "ON" : "OFF");
   }
 }
 
-std::vector<hardware_interface::StateInterface> 
+std::vector<hardware_interface::StateInterface>
 LaserHardwareInterface::export_state_interfaces()
 {
   std::vector<hardware_interface::StateInterface> state_interfaces;
 
-  // Use the gpio name from URDF
-  const std::string& name = info_.gpios[0].name;
+  const std::string & name = info_.gpios[0].name;
 
-  // Laser state (ON/OFF)
   state_interfaces.emplace_back(
     hardware_interface::StateInterface(name, "laser_state", &laser_state_));
 
-  // Temperature
-  state_interfaces.emplace_back(
-    hardware_interface::StateInterface(name, "temperature", &temperature_));
-
-  // Connection status
   state_interfaces.emplace_back(
     hardware_interface::StateInterface(name, "is_connected", &is_connected_));
 
@@ -135,15 +135,13 @@ LaserHardwareInterface::export_state_interfaces()
   return state_interfaces;
 }
 
-std::vector<hardware_interface::CommandInterface> 
+std::vector<hardware_interface::CommandInterface>
 LaserHardwareInterface::export_command_interfaces()
 {
   std::vector<hardware_interface::CommandInterface> command_interfaces;
 
-  // Use the gpio name from URDF
-  const std::string& name = info_.gpios[0].name;
+  const std::string & name = info_.gpios[0].name;
 
-  // Laser command (ON/OFF)
   command_interfaces.emplace_back(
     hardware_interface::CommandInterface(name, "laser_command", &laser_command_));
 
@@ -175,16 +173,18 @@ hardware_interface::CallbackReturn LaserHardwareInterface::on_deactivate(
   if (can_connected_) {
     can_tx_frame_ = CANLib::CanFrame();
     can_tx_frame_.id = can_id_;
-    can_tx_frame_.dlc = 1;
-    can_tx_frame_.data[0] = CMD_LASER_OFF;
+    can_tx_frame_.dlc = 2;
+    can_tx_frame_.data[0] = static_cast<uint8_t>(CMD_LASER_CONTROL + port_id_);
+    can_tx_frame_.data[1] = 0;
     canBus_.send(can_tx_frame_);
-    
-    RCLCPP_INFO(
-      rclcpp::get_logger("LaserHardwareInterface"),
-      "Laser turned OFF (safety)");
+
+    canBus_.close();
+    can_connected_ = false;
+    is_connected_ = 0.0;
   }
 
   laser_state_ = 0.0;
+  laser_command_ = 0.0;
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -196,19 +196,21 @@ hardware_interface::CallbackReturn LaserHardwareInterface::on_cleanup(
     rclcpp::get_logger("LaserHardwareInterface"),
     "Cleaning up laser hardware...");
 
-  // Ensure laser is OFF before cleanup
   if (can_connected_) {
+    // Ensure laser is OFF before cleanup
     can_tx_frame_ = CANLib::CanFrame();
     can_tx_frame_.id = can_id_;
-    can_tx_frame_.dlc = 1;
-    can_tx_frame_.data[0] = CMD_LASER_OFF;
+    can_tx_frame_.dlc = 2;
+    can_tx_frame_.data[0] = static_cast<uint8_t>(CMD_LASER_CONTROL + port_id_);
+    can_tx_frame_.data[1] = 0;
     canBus_.send(can_tx_frame_);
-    
     canBus_.close();
   }
 
   can_connected_ = false;
   is_connected_ = 0.0;
+  laser_state_ = 0.0;
+  laser_command_ = 0.0;
 
   RCLCPP_INFO(
     rclcpp::get_logger("LaserHardwareInterface"),
@@ -240,7 +242,6 @@ hardware_interface::return_type LaserHardwareInterface::write(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
-  // Check if laser command changed
   bool commanded_on = (laser_command_ > 0.5);
   bool currently_on = (laser_state_ > 0.5);
 
@@ -248,17 +249,21 @@ hardware_interface::return_type LaserHardwareInterface::write(
     if (can_connected_) {
       can_tx_frame_ = CANLib::CanFrame();
       can_tx_frame_.id = can_id_;
-      can_tx_frame_.dlc = 1;
-      can_tx_frame_.data[0] = commanded_on ? CMD_LASER_ON : CMD_LASER_OFF;
+      can_tx_frame_.dlc = 2;
+      can_tx_frame_.data[0] = static_cast<uint8_t>(CMD_LASER_CONTROL + port_id_);
+      can_tx_frame_.data[1] = commanded_on ? 1 : 0;
       canBus_.send(can_tx_frame_);
-    }
 
-    laser_state_ = commanded_on ? 1.0 : 0.0;
-    
-    RCLCPP_INFO(
-      rclcpp::get_logger("LaserHardwareInterface"),
-      "Laser turned %s%s", commanded_on ? "ON" : "OFF",
-      can_connected_ ? "" : " (simulated)");
+      RCLCPP_INFO(
+        rclcpp::get_logger("LaserHardwareInterface"),
+        "Laser command sent: %s", commanded_on ? "ON" : "OFF");
+    } else {
+      // Simulation mode — update state immediately, no hardware to confirm
+      laser_state_ = commanded_on ? 1.0 : 0.0;
+      RCLCPP_INFO(
+        rclcpp::get_logger("LaserHardwareInterface"),
+        "Laser turned %s (simulated)", commanded_on ? "ON" : "OFF");
+    }
   }
 
   return hardware_interface::return_type::OK;

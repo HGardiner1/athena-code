@@ -1,21 +1,22 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-    <xacro:macro name="laser_ros2_control" params="name can_interface:=can0 port_id:=0">
+    <xacro:macro name="sensor_diode_ros2_control" params="name can_interface:=can0">
 
         <ros2_control name="${name}" type="system">
 
             <hardware>
-                <plugin>laser_ros2_control/LaserHardwareInterface</plugin>
+                <plugin>sensor_diode_ros2_control/SensorDiodeHardwareInterface</plugin>
                 <param name="can_interface">${can_interface}</param>
-                <param name="can_id">0x130</param>
-                <param name="port_id">${port_id}</param>
+                <param name="can_id">0x110</param>
             </hardware>
 
             <gpio name="${name}">
-                <state_interface name="laser_state"/>
+                <state_interface name="wavelength_intensity"/>
+                <state_interface name="command_success"/>
                 <state_interface name="is_connected"/>
-                <command_interface name="laser_command"/>
+
+                <command_interface name="request_measurement"/>
             </gpio>
 
         </ros2_control>

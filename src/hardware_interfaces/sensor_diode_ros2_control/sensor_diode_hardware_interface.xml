@@ -1,0 +1,9 @@
+<library path="sensor_diode_ros2_control">
+    <class name="sensor_diode_ros2_control/SensorDiodeHardwareInterface"
+      type="sensor_diode_ros2_control::SensorDiodeHardwareInterface"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Hardware interface for spectrometry sensor_diode control via ros2_control.
+    </description>
+  </class>
+</library>

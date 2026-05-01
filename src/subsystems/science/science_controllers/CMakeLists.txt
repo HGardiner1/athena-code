@@ -15,6 +15,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp_lifecycle
   realtime_tools
   std_srvs
+  raman_msgs 
 )
 
 find_package(ament_cmake REQUIRED)
@@ -30,7 +31,7 @@ endforeach()
 # Add science_manual library related compile commands
 generate_parameter_library(
   science_manual_parameters
-  src/science_controller.yaml
+  config/science_controller.yaml
   include/science_controllers/validate_science_controller_parameters.hpp
 )
 
@@ -39,6 +40,14 @@ add_library(
   SHARED
   src/science_controller.cpp
 )
+
+
+add_library(
+  ccd_snapshot_controller
+  SHARED
+  src/ccd_controller.cpp
+)
+
 target_include_directories(science_manual PUBLIC
   "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
@@ -47,12 +56,20 @@ target_link_libraries(science_manual science_manual_parameters)
 ament_target_dependencies(science_manual ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_definitions(science_manual PRIVATE "SCIENCE_MANUAL_BUILDING_DLL")
 
+target_include_directories(ccd_snapshot_controller PUBLIC
+  "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
+ament_target_dependencies(ccd_snapshot_controller ${THIS_PACKAGE_INCLUDE_DEPENDS})
+target_compile_definitions(ccd_snapshot_controller PRIVATE "CCD_SNAPSHOT_BUILDING_DLL")
+
 pluginlib_export_plugin_description_file(
   controller_interface science_controllers.xml)
 
 install(
   TARGETS
   science_manual
+  ccd_snapshot_controller
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -69,35 +86,35 @@ install(
 )
 
 
-# if(BUILD_TESTING)
+if(BUILD_TESTING)
 
-#   ament_add_gmock(test_load_athena_science_manual test/test_load_athena_science_manual.cpp)
-#   target_include_directories(test_load_athena_science_manual PRIVATE include)
-#   ament_target_dependencies(
-#     test_load_athena_science_manual
-#     controller_manager
-#     hardware_interface
-#     ros2_control_test_assets
-#   )
+   ament_add_gmock(test_load_athena_science_manual test/test_load_athena_science_manual.cpp)
+   target_include_directories(test_load_athena_science_manual PRIVATE include)
+   ament_target_dependencies(
+     test_load_athena_science_manual
+     controller_manager
+     hardware_interface
+     ros2_control_test_assets
+   )
 
-#   add_rostest_with_parameters_gmock(test_athena_science_manual test/test_athena_science_manual.cpp ${CMAKE_CURRENT_SOURCE_DIR}/test/athena_science_manual_params.yaml)
-#   target_include_directories(test_athena_science_manual PRIVATE include)
-#   target_link_libraries(test_athena_science_manual athena_science_manual)
-#   ament_target_dependencies(
-#     test_athena_science_manual
-#     controller_interface
-#     hardware_interface
-#   )
+   add_rostest_with_parameters_gmock(test_athena_science_manual test/test_athena_science_manual.cpp ${CMAKE_CURRENT_SOURCE_DIR}/test/athena_science_manual_params.yaml)
+   target_include_directories(test_athena_science_manual PRIVATE include)
+   target_link_libraries(test_athena_science_manual athena_science_manual)
+   ament_target_dependencies(
+     test_athena_science_manual
+     controller_interface
+     hardware_interface
+   )
 
-#   add_rostest_with_parameters_gmock(test_athena_science_manual_preceeding test/test_athena_science_manual_preceeding.cpp ${CMAKE_CURRENT_SOURCE_DIR}/test/athena_science_manual_preceeding_params.yaml)
-#   target_include_directories(test_athena_science_manual_preceeding PRIVATE include)
-#   target_link_libraries(test_athena_science_manual_preceeding athena_science_manual)
-#   ament_target_dependencies(
-#     test_athena_science_manual_preceeding
-#     controller_interface
-#     hardware_interface
-#   )
-# endif()
+   add_rostest_with_parameters_gmock(test_athena_science_manual_preceeding test/test_athena_science_manual_preceeding.cpp ${CMAKE_CURRENT_SOURCE_DIR}/test/athena_science_manual_preceeding_params.yaml)
+   target_include_directories(test_athena_science_manual_preceeding PRIVATE include)
+   target_link_libraries(test_athena_science_manual_preceeding athena_science_manual)
+   ament_target_dependencies(
+     test_athena_science_manual_preceeding
+     controller_interface
+     hardware_interface
+   )
+ endif()
 
 ament_export_include_directories(
   include
@@ -107,6 +124,7 @@ ament_export_dependencies(
 )
 ament_export_libraries(
   science_manual
+  ccd_snapshot_controller
 )
 
 ament_package()

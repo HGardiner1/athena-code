@@ -27,6 +27,8 @@
 
   <depend>std_srvs</depend>
 
+  <depend>raman_msgs</depend>
+
   <export>
     <pluginlib plugin="${prefix}/science_controllers.xml"/>
     <build_type>ament_cmake</build_type>

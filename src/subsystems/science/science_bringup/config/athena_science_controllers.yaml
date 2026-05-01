@@ -15,8 +15,15 @@ controller_manager:
     science_controller:
       type: science_controllers/ScienceManual
 
+    # CCD Controller (CAN-based)
+    ccd_controller:
+      type: science_controllers/CCDSnapshotController
+
     # Laser GPIO Controller (CAN-based)
     laser_gpio_controller:
+      type: gpio_controllers/GpioCommandController
+
+    sensor_diode_gpio_controller:
       type: gpio_controllers/GpioCommandController
 
     motor_status_broadcaster:
@@ -77,6 +84,26 @@ science_controller:
     command_interfaces: [position, velocity]
     state_interfaces: [position, velocity]
 
+ccd_controller:
+  ros__parameters:
+    ccd_name: "spectrometry_ccd"
+    command_interfaces: ["capture_byte"]
+    state_interfaces:
+      - is_connected
+      - command_success
+      - acquisition_in_progress
+      - data_ready
+      - frames_received
+      - last_frame_id
+      
+    snapshot_service_name: "~/request_snapshot"
+    status_publish_topic: "~/status"
+    snapshot_publish_topic: "~/snapshot"
+
+    publish_rate: 10.0
+    acquisition_timeout_sec: 5.0
+    expected_total_frames: 609
+
 # Laser GPIO Controller Configuration
 laser_gpio_controller:
   ros__parameters:
@@ -90,7 +117,22 @@ laser_gpio_controller:
       spectrometry_laser:
         interfaces:
           - laser_state
-          - temperature
+          - is_connected
+
+# Sensor Diode Controller Configuration
+sensor_diode_gpio_controller:
+  ros__parameters:
+    gpios:
+      - sensor_diode
+    command_interfaces:
+      sensor_diode:
+        interfaces:
+          - request_measurement
+    state_interfaces:
+      sensor_diode:
+        interfaces:
+          - wavelength_intensity
+          - command_success
           - is_connected
 
 motor_status_broadcaster:

@@ -26,3 +26,13 @@ Source of this file are templates in
   </description>
   </class>
 </library>
+
+<library path="ccd_snapshot_controller">
+  <class
+    name="science_controllers/CCDSnapshotController"
+    type="science_controllers::CCDSnapshotController" base_class_type="controller_interface::ControllerInterface">
+    <description>
+      CCD snapshot controller for spectrometry acquisition.
+    </description>
+  </class>
+</library>

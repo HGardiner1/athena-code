@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="ccd_ros2_control" params="name can_interface:=can0">
+
+        <ros2_control name="${name}" type="system">
+
+            <hardware>
+                <plugin>ccd_ros2_control/CCDHardwareInterface</plugin>
+                <param name="can_interface">${can_interface}</param>
+                <param name="can_id">0x100</param>
+            </hardware>
+
+            <gpio name="${name}">
+                <state_interface name="is_connected"/>
+                <state_interface name="command_success"/>
+                <state_interface name="acquisition_in_progress"/>
+                <state_interface name="data_ready"/>
+                <state_interface name="frames_received"/>
+                <state_interface name="last_frame_id"/>
+
+                <command_interface name="capture_binary"/>
+                <command_interface name="capture_byte"/>
+            </gpio>
+
+        </ros2_control>
+
+    </xacro:macro>
+
+</robot>
+

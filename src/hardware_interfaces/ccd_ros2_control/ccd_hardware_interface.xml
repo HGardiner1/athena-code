@@ -1,0 +1,9 @@
+<library path="ccd_ros2_control">
+  <class name="ccd_ros2_control/CCDHardwareInterface"
+         type="ccd_ros2_control::CCDHardwareInterface"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Hardware interface for spectrometry ccd control via ros2_control.
+    </description>
+  </class>
+</library>
