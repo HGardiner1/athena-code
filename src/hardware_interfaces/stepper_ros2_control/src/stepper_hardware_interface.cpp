@@ -255,10 +255,10 @@ hardware_interface::CallbackReturn STEPPERHardwareInterface::on_configure(
 // All responses return: data[1-2] = position (int16, deg), data[3-4] = velocity (int16, deg/s).
 void STEPPERHardwareInterface::onCanMessage(const CANLib::CanFrame& frame)
 {
-  RCLCPP_INFO(
-    rclcpp::get_logger("STEPPER"),
-    "RX id=0x%X dlc=%d b0=0x%02X",
-    frame.id, frame.dlc, frame.data[0]);
+  // RCLCPP_INFO(
+  //   rclcpp::get_logger("STEPPER"),
+  //   "RX id=0x%X dlc=%d b0=0x%02X",
+  //   frame.id, frame.dlc, frame.data[0]);
 
   can_rx_frame_ = frame;
 
@@ -448,9 +448,12 @@ hardware_interface::return_type STEPPERHardwareInterface::write(
 
         // VELOCITY_CONTROL_CMD = 0x3 → (0x3 << 4) | port_id = 0x30 | port_id
         uint8_t port_id = joint_node_ids[i] & 0x0F;
-        can_tx_frame_.data[0] = static_cast<uint8_t>((VELOCITY_CONTROL_CMD << 4) | port_id);
+        can_tx_frame_.data[0] = static_cast<uint8_t>((VELOCITY_CONTROL_CMD & 0xF0) | port_id);
         can_tx_frame_.data[1] = static_cast<uint8_t>(speed_dps & 0xFF);         // low byte
         can_tx_frame_.data[2] = static_cast<uint8_t>((speed_dps >> 8) & 0xFF);  // high byte
+
+        RCLCPP_INFO(rclcpp::get_logger("STEPPERHardwareInterface"), "Data[0]: 0x%02X | Data[1-2] (speed_dps): %d | Joint: %s",
+          can_tx_frame_.data[0], speed_dps, info_.joints[i].name.c_str());
 
         canBus_.send(can_tx_frame_);
       }

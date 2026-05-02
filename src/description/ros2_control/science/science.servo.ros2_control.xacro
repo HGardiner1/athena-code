@@ -6,7 +6,7 @@
                 <plugin>servo_ros2_control/SERVOHardwareInterface</plugin>
                 <param name="update_rate">20</param> <!-- Hz -->
                 <param name="logger_rate">5</param> <!-- Hz -->
-                <param name="logger_state">1</param> <!-- 0 for off, 1 for on -->
+                <param name="logger_state">0</param> <!-- 0 for off, 1 for on -->
                 <param name="can_interface">can0</param>
                 <param name="can_id">0x80</param>
             </hardware>

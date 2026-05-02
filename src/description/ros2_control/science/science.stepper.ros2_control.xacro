@@ -15,7 +15,7 @@
             </hardware>
 
             <joint name="stepper_motor_a">
-                <param name="node_id">0x2</param>
+                <param name="node_id">0x0</param>
                 <param name="gear_ratio">1</param>
                 <param name="rated_max">20</param>
                 <param name="joint_type">continuous</param>
@@ -26,7 +26,7 @@
             </joint>
 
             <joint name="stepper_motor_b">
-                <param name="node_id">0x3</param>
+                <param name="node_id">0x1</param>
                 <param name="gear_ratio">1</param>
                 <param name="rated_max">20</param>
                 <param name="joint_type">continuous</param>
