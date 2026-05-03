@@ -12,15 +12,23 @@
             </hardware>
 
             <gpio name="${name}">
+                <command_interface name="capture_binary"/>
+                <command_interface name="capture_byte"/>
+                <command_interface name="status_request"/>
+                <command_interface name="maintenance_request"/>
+                <command_interface name="maintenance_frame_high"/>
+                <command_interface name="maintenance_frame_low"/>
+                <command_interface name="maintenance_data_count"/>
+
+
                 <state_interface name="is_connected"/>
                 <state_interface name="command_success"/>
                 <state_interface name="acquisition_in_progress"/>
                 <state_interface name="data_ready"/>
                 <state_interface name="frames_received"/>
                 <state_interface name="last_frame_id"/>
-
-                <command_interface name="capture_binary"/>
-                <command_interface name="capture_byte"/>
+                <state_interface name="status"/>
+                
             </gpio>
 
         </ros2_control>
