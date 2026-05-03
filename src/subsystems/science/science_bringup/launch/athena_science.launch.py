@@ -177,11 +177,11 @@ def generate_launch_description():
         arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
     )
 
-    motor_status_broadcaster_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["motor_status_broadcaster", "-c", "/controller_manager"],
-    )
+    # motor_status_broadcaster_spawner = Node(
+    #     package="controller_manager",
+    #     executable="spawner",
+    #     arguments=["motor_status_broadcaster", "-c", "/controller_manager"],
+    # )
 
     # CONTROLLER MANAGERS
 
@@ -265,12 +265,12 @@ def generate_launch_description():
     )
 
     # Delay motor_status_broadcaster (inactive) after joint_state_broadcaster
-    delay_motor_status_broadcaster_after_joint_state_broadcaster = RegisterEventHandler(
-        event_handler=OnProcessExit(
-            target_action=joint_state_broadcaster_spawner,
-            on_exit=[motor_status_broadcaster_spawner],
-        )
-    )
+    # delay_motor_status_broadcaster_after_joint_state_broadcaster = RegisterEventHandler(
+    #     event_handler=OnProcessExit(
+    #         target_action=joint_state_broadcaster_spawner,
+    #         on_exit=[motor_status_broadcaster_spawner],
+    #     )
+    # )
 
     # Delay loading and activation of `joint_state_broadcaster` after start of ros2_control_node
     delay_joint_state_broadcaster_spawner_after_ros2_control_node = RegisterEventHandler(
@@ -332,7 +332,7 @@ def generate_launch_description():
             robot_state_pub_node,
             rviz_node,
             delay_joint_state_broadcaster_spawner_after_ros2_control_node,
-            delay_motor_status_broadcaster_after_joint_state_broadcaster,
+            # delay_motor_status_broadcaster_after_joint_state_broadcaster,
             # umdloop_can_node,
             controller_switcher_node,
             joystick_publisher,

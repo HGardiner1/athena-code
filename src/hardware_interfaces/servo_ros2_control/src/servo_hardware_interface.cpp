@@ -547,12 +547,12 @@ hardware_interface::return_type servo_ros2_control::SERVOHardwareInterface::writ
             RCLCPP_WARN(rclcpp::get_logger("SERVOHardwareInterface"), "Joint %s is standard type and cannot be velocity controlled.", info_.joints[i].name.c_str());
           }
           else{
-            RCLCPP_WARN(rclcpp::get_logger("SERVOHardwareInterface"), "Joint command value not found or undefined command state for joint %s", info_.joints[i].name.c_str());          }
+            // RCLCPP_WARN(rclcpp::get_logger("SERVOHardwareInterface"), "Joint command value not found or undefined command state for joint %s", info_.joints[i].name.c_str());          }
           }
         }
       
       canBus.send(can_tx_frame_);
-    // }
+    }
   }
 
   return hardware_interface::return_type::OK;

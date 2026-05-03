@@ -121,6 +121,7 @@ manual_arm_joint_by_joint_controller:
       - 0.785398
       - 0.005       # TODO: Find this
       - 0.03        # Actuator max displacement
+    virtual_four_bar_coupling_ratio: -1.0
 
 motor_status_broadcaster:
   ros__parameters:

@@ -1,5 +1,6 @@
 #include "athena_arm_controllers/manual_arm_joint_by_joint_controller.hpp"
 
+#include <cmath>
 #include <limits>
 #include <memory>
 #include <string>
@@ -82,6 +83,7 @@ controller_interface::CallbackReturn ManualArmJointByJointController::on_configu
   num_joints = static_cast<int>(params_.position_joints.size()) + static_cast<int>(params_.velocity_joints.size());
   joint_velocities_.resize(num_joints, 0.0); // Output
   max_velocities_ = params_.joint_max_velocities;
+  virtual_four_bar_coupling_ratio_ = params_.virtual_four_bar_coupling_ratio;
 
   // topics QoS
   auto subscribers_qos = rclcpp::SystemDefaultsQoS();
@@ -174,7 +176,7 @@ controller_interface::InterfaceConfiguration ManualArmJointByJointController::st
 
   state_interfaces_config.names.reserve(num_joints);
   for (const auto & joint : params_.velocity_joints) {
-    state_interfaces_config.names.push_back(joint + "/velocity");
+    state_interfaces_config.names.push_back(joint + "/position");
   }
 
   for (const auto & joint : params_.position_joints) {
@@ -270,6 +272,10 @@ controller_interface::return_type ManualArmJointByJointController::update(
     }
     joint_velocities_.resize(7, 0.0);
   }
+
+  // Virtual four-bar compensation. With the current -1.0 ratio, shoulder-only motion commands
+  // the elbow motor equally in the opposite direction so the net elbow joint angle stays fixed.
+  joint_velocities_[2] += virtual_four_bar_coupling_ratio_ * joint_velocities_[1];
 
   // RCLCPP_INFO(get_node()->get_logger(), "Size of Command Interface: %d", command_interfaces_.size());
 

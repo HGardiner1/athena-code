@@ -94,6 +94,9 @@ protected:
   // Represents maximum velocities of each joint
   std::vector<double> max_velocities_;
 
+  // Virtual four-bar ratio applied as elbow_motor_velocity += ratio * shoulder_motor_velocity.
+  double virtual_four_bar_coupling_ratio_ = -1.0;
+
   // Command subscribers and Controller State publisher
   rclcpp::Subscription<ControllerReferenceMsg>::SharedPtr ref_subscriber_ = nullptr;
   realtime_tools::RealtimeBuffer<std::shared_ptr<ControllerReferenceMsg>> input_ref_;
