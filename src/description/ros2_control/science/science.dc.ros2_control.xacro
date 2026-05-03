@@ -17,7 +17,7 @@
       <joint name="dc_auger">
         <param name="node_id">0</param>
         <param name="joint_type">revolute</param>
-        <!-- Motor config (goBilda Saturn 5303 Series 360 RPM) -->
+
         <param name="gear_ratio">50.9</param>
         <param name="inverted">true</param>
         <command_interface name="position"/>
@@ -31,7 +31,7 @@
       <joint name="dc_scoop">
         <param name="node_id">2</param>
         <param name="joint_type">revolute</param>
-        <!-- Motor config (Pololu 37D defaults) -->
+
         <param name="gear_ratio">50.9</param>
         <param name="inverted">true</param>
         <command_interface name="position"/>
