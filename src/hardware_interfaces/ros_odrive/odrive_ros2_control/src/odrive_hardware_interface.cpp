@@ -116,7 +116,7 @@ CallbackReturn ODriveHardwareInterface::on_init(const hardware_interface::Hardwa
         return CallbackReturn::ERROR;
     }
 
-    can_intf_name_ = info_.hardware_parameters["can"];
+    can_intf_name_ = "can1";
 
     for (auto& joint : info_.joints) {
         axes_.emplace_back(&can_intf_, std::stoi(joint.parameters.at("node_id")), std::stoi(joint.parameters.at("gear_ratio")));
