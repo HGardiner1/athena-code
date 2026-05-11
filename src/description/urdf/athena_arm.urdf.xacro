@@ -32,6 +32,13 @@
   <!-- Import servo ros2_control description -->
   <xacro:include filename="$(find description)/ros2_control/arm/arm.servo.ros2_control.xacro" />
 
+  <!-- Import rotary encoder ros2_control description -->
+  <xacro:include filename="$(find description)/ros2_control/arm/arm.rotary_encoder.ros2_control.xacro" />
+
+  <!-- Import limit switch ros2_control descriptions -->
+  <xacro:include filename="$(find description)/ros2_control/arm/arm.base_limit_switch.ros2_control.xacro" />
+  <xacro:include filename="$(find description)/ros2_control/arm/arm.end_effector_limit_switch.ros2_control.xacro" />
+
   <!-- Import odrive ros2_control description -->
   <!-- <xacro:include filename="$(find description)/config/odrive.ros2_control.xacro" /> -->
 
@@ -59,6 +66,9 @@
 
     <xacro:rmd_ros2_control name="rmd"/>
     <xacro:servo_ros2_control name="servo"/>
+    <xacro:rotary_encoder_ros2_control name="rotary_encoder"/>
+    <xacro:base_arm_limit_switch_ros2_control name="base_arm_limit_switch"/>
+    <xacro:end_effector_limit_switch_ros2_control name="end_effector_limit_switch"/>
     <!-- <xacro:odrive_ros2_control name="odrive"/> -->
   </xacro:unless>
 
