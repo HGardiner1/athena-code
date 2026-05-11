@@ -17,10 +17,12 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CANA.msg"
   "msg/CANB.msg"
   "msg/Currentdraw.msg"
-  "msg/JointReceiver.msg"
+  "msg/JointStatus.msg"
   "msg/SystemInfo.msg"
   "msg/Heading.msg"
   "srv/SetController.srv"
+  "srv/StatusReq.srv"
+  "srv/MaintenanceReq.srv"
   "action/NavigateToGPS.action"
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs builtin_interfaces action_msgs
 )

@@ -86,7 +86,13 @@ def generate_launch_description():
             Used only if 'use_mock_hardware' parameter is true.",
         )
     )
-
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "deactivate_talon",
+            default_value="false",
+            description="Deactivate the talon joints in the URDF when using mock hardware to prevent excessive CAN flow.",
+        )
+    )
     declared_arguments.append(
         DeclareLaunchArgument(
             "robot_controller",
@@ -105,6 +111,7 @@ def generate_launch_description():
     use_mock_hardware = LaunchConfiguration("use_mock_hardware")
     mock_sensor_commands = LaunchConfiguration("mock_sensor_commands")
     robot_controller = LaunchConfiguration("robot_controller")
+    deactivate_talon = LaunchConfiguration("deactivate_talon")
 
     # Get URDF via xacro
     robot_description_content = Command(
@@ -124,6 +131,8 @@ def generate_launch_description():
             "mock_sensor_commands:=",
             mock_sensor_commands,
             " ",
+            "deactivate_talon:=",
+            deactivate_talon,
         ]
     )
 
@@ -134,6 +143,10 @@ def generate_launch_description():
     )
     rviz_config_file = PathJoinSubstitution(
         [FindPackageShare(description_package), "rviz", "athena_science.rviz"]
+    )
+
+    controller_switcher_config = PathJoinSubstitution(
+        [FindPackageShare("bringup"), "config", "controller_switcher.yaml"]
     )
 
     joystick_config_file = PathJoinSubstitution(
@@ -178,10 +191,10 @@ def generate_launch_description():
         arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
     )
 
-    motor_status_broadcaster_spawner = Node(
+    motor_status_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["motor_status_broadcaster", "-c", "/controller_manager"],
+        arguments=["motor_status_controller", "-c", "/controller_manager"],
     )
 
     # CONTROLLER MANAGERS
@@ -211,7 +224,9 @@ def generate_launch_description():
         ]
 
     # GPIO controller spawner for Laser
-    gpio_controller_names = ["laser_gpio_controller", "sensor_diode_gpio_controller"]
+
+    gpio_controller_names = ["laser_gpio_controller", "fluoro_led_gpio_controller", "sensor_diode_gpio_controller"]
+
     gpio_controller_spawners = []
     for controller in gpio_controller_names:
         gpio_controller_spawners += [
@@ -263,17 +278,18 @@ def generate_launch_description():
                     package="bringup",
                     executable="controller_switcher.py",
                     name="controller_switcher",
-                    output="screen"
+                    output="screen",
+                    parameters=[controller_switcher_config, {"subsystem": "science"}]
                 )]
             )],
         )
     )
 
-    # Delay motor_status_broadcaster (inactive) after joint_state_broadcaster
-    delay_motor_status_broadcaster_after_joint_state_broadcaster = RegisterEventHandler(
+    # Delay motor_status_controller (inactive) after joint_state_broadcaster
+    delay_motor_status_controller_after_joint_state_broadcaster = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=joint_state_broadcaster_spawner,
-            on_exit=[motor_status_broadcaster_spawner],
+            on_exit=[motor_status_controller_spawner],
         )
     )
 
@@ -337,7 +353,7 @@ def generate_launch_description():
             robot_state_pub_node,
             rviz_node,
             delay_joint_state_broadcaster_spawner_after_ros2_control_node,
-            delay_motor_status_broadcaster_after_joint_state_broadcaster,
+            delay_motor_status_controller_after_joint_state_broadcaster,
             # umdloop_can_node,
             controller_switcher_node,
             joystick_publisher,
