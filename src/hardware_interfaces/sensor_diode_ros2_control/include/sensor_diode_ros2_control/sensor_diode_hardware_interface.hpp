@@ -1,26 +1,11 @@
-// Copyright (c) 2024 UMD Loop
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-
 #ifndef SENSOR_DIODE_ROS2_CONTROL__SENSOR_DIODE_HARDWARE_INTERFACE_HPP_
 #define SENSOR_DIODE_ROS2_CONTROL__SENSOR_DIODE_HARDWARE_INTERFACE_HPP_
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <array>
 
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
@@ -29,19 +14,11 @@
 #include "rclcpp/macros.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
-
-#include "umdloop_can_library/SocketCanBus.hpp"
 #include "umdloop_can_library/CanFrame.hpp"
+#include "umdloop_can_library/SocketCanBus.hpp"
 
 namespace sensor_diode_ros2_control
 {
-
-/**
- * @brief Hardware interface for CAN-controlled spectrometry sensor diode via ros2_control
- * 
- * This interface controls a spectrometry sensor_diode through CAN bus.
- * 
-**/
 
 class SensorDiodeHardwareInterface : public hardware_interface::SystemInterface
 {
@@ -50,7 +27,7 @@ public:
 
   hardware_interface::CallbackReturn on_init(
     const hardware_interface::HardwareInfo & info) override;
-
+    
   hardware_interface::CallbackReturn on_configure(
     const rclcpp_lifecycle::State & previous_state) override;
 
@@ -69,41 +46,104 @@ public:
 
   hardware_interface::CallbackReturn on_shutdown(
     const rclcpp_lifecycle::State & previous_state) override;
-
+    
   hardware_interface::return_type read(
-    const rclcpp::Time & time,
-    const rclcpp::Duration & period) override;
+    const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
   hardware_interface::return_type write(
-    const rclcpp::Time & time,
-    const rclcpp::Duration & period) override;
+    const rclcpp::Time & time, const rclcpp::Duration & period) override;
+
+  void logger_function();
 
 private:
-  // CAN message handler
-  void onCanMessage(const CANLib::CanFrame& frame);
+  struct SensorDiodeJoint
+  {
+    std::string name;
+    uint32_t can_id;
 
-  // Configuration parameters
+    // State interfaces
+    double wavelength_intensity;
+    double command_success;
+    double is_connected;
+    double status;
+
+    // Command interfaces
+    double request_measurement_cmd;
+    double status_request;
+    double maintenance_request;
+    double maintenance_frame_high;
+    double maintenance_frame_low;
+    double maintenance_data_count;
+
+    // Tracking
+    double prev_status_request;
+    double prev_maintenance_request;
+    double elapsed_status_request_time;
+    double elapsed_maintenance_request_time;
+
+    // Internal
+    bool awaiting_response;
+    double maintenance_frame;
+  };
+
+  void onCanMessage(const CANLib::CanFrame & frame);
+
   std::string can_interface_;
   uint32_t can_id_;
   uint8_t port_id_;
 
-  // CAN bus
   CANLib::SocketCanBus canBus_;
   CANLib::CanFrame can_tx_frame_;
   bool can_connected_;
 
-  // State variables (hardware -> ros2_control)
-  double is_connected_;
-  double command_success_;
-  double wavelength_intensity_;
+  std::vector<SensorDiodeJoint> DIODEJoints_;
 
-  // Command variables (ros2_control -> hardware)
-  double request_measurement_cmd_;
+  int update_rate_;
+  int logger_rate_;
+  int logger_state_;
+  double elapsed_time_;
+  double elapsed_logger_time_;
 
-  bool awaiting_response_;
-
-  // CAN command bytes
   static constexpr uint8_t CMD_READ_DIODE_VALUE = 0x20;
+  static constexpr uint8_t CONFIRM_SEND         = 0x01;
+
+  // Maintenance frame unpacking — same pattern as servo/CCD
+  struct DecodedCommand
+  {
+    uint8_t command_id;
+    std::vector<uint8_t> u8_data;
+    std::vector<int16_t> i16_data;
+    std::vector<int32_t> i32_data;
+  };
+
+  inline DecodedCommand unpack_command_full(int32_t counts_in, int64_t payload_in)
+  {
+    const uint32_t counts  = static_cast<uint32_t>(counts_in);
+    const uint64_t payload = static_cast<uint64_t>(payload_in);
+
+    const uint8_t u8_count  = static_cast<uint8_t>((counts >> 16) & 0xFF);
+    const uint8_t i16_count = static_cast<uint8_t>((counts >> 8)  & 0xFF);
+    const uint8_t i32_count = static_cast<uint8_t>( counts        & 0xFF);
+
+    int bit_offset = 64;
+    auto pop_bits = [&](int bits) -> uint64_t {
+      bit_offset -= bits;
+      const uint64_t mask = (bits == 64)
+        ? std::numeric_limits<uint64_t>::max()
+        : ((1ULL << bits) - 1ULL);
+      return (payload >> bit_offset) & mask;
+    };
+
+    DecodedCommand result{};
+    result.command_id = static_cast<uint8_t>(pop_bits(8));
+    for (uint8_t i = 0; i < u8_count;  ++i)
+      result.u8_data.push_back(static_cast<uint8_t>(pop_bits(8)));
+    for (uint8_t i = 0; i < i16_count; ++i)
+      result.i16_data.push_back(static_cast<int16_t>(static_cast<uint16_t>(pop_bits(16))));
+    for (uint8_t i = 0; i < i32_count; ++i)
+      result.i32_data.push_back(static_cast<int32_t>(static_cast<uint32_t>(pop_bits(32))));
+    return result;
+  }
 };
 
 }  // namespace sensor_diode_ros2_control

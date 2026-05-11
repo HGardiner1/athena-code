@@ -1,18 +1,3 @@
-// Copyright (c) 2024 UMD Loop
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-
 #ifndef LASER_ROS2_CONTROL__LASER_HARDWARE_INTERFACE_HPP_
 #define LASER_ROS2_CONTROL__LASER_HARDWARE_INTERFACE_HPP_
 
@@ -20,7 +5,6 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <array>
 
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
@@ -29,35 +13,12 @@
 #include "rclcpp/macros.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
-
-#include "umdloop_can_library/SocketCanBus.hpp"
 #include "umdloop_can_library/CanFrame.hpp"
+#include "umdloop_can_library/SocketCanBus.hpp"
 
 namespace laser_ros2_control
 {
 
-/**
- * @brief Hardware interface for CAN-controlled spectrometry laser via ros2_control
- * 
- * This interface controls a spectrometry laser through CAN bus.
- * 
- * CAN Protocol (ID: 0x130):
- * - ON:  DATA[0] = 0x20 + port_id, DATA[1] = 0x01
- * - OFF: DATA[0] = 0x20 + port_id, DATA[1] = 0x00
- * - Status: DATA[0] = 0x30 + port_id, DATA[1] = 0x01
- * 
- * State Interfaces (read by controllers):
- * - laser_state: 0.0 = OFF, 1.0 = ON
- * - temperature: Laser temperature (if available)
- * - is_connected: Is CAN connected (0.0 or 1.0)
- * 
- * Command Interfaces (written by controllers):
- * - laser_command: 0.0 = turn OFF, 1.0 = turn ON
- * 
- * Hardware Parameters (from URDF):
- * - can_interface: CAN interface name (default: "can0")
- * - can_id: CAN ID for laser commands (default: 0x130)
- */
 class LaserHardwareInterface : public hardware_interface::SystemInterface
 {
 public:
@@ -93,32 +54,41 @@ public:
     const rclcpp::Time & time,
     const rclcpp::Duration & period) override;
 
+  void logger_function();
+
 private:
-  // CAN message handler
-  void onCanMessage(const CANLib::CanFrame& frame);
+  struct LaserJoint
+  {
+    std::string name;
+    uint32_t can_id;
+    double laser_state;
+    double temperature;
+    double is_connected;
+    double status;
+    double laser_command;
+    double status_request;
+    double prev_status_request;
+    double elapsed_status_request_time;
+  };
 
-  // Configuration parameters
+  void onCanMessage(const CANLib::CanFrame & frame);
   std::string can_interface_;
-  uint32_t can_id_;
+  uint32_t can_id_;         
+  uint8_t port_id_;          
 
-  // CAN bus
   CANLib::SocketCanBus canBus_;
   CANLib::CanFrame can_tx_frame_;
   bool can_connected_;
-
-  // State variables (hardware → ros2_control)
-  double laser_state_;      // Current state: 0.0 = OFF, 1.0 = ON
-  double is_connected_;     // CAN connected status
-
-  // Command variables (ros2_control → hardware)
-  double laser_command_;    // Commanded state
+  std::vector<LaserJoint> LASERJoints_;
+  int update_rate_;
+  int logger_rate_;
+  int logger_state_;
+  double elapsed_time_;
+  double elapsed_logger_time_;
 
   // CAN command bytes
-  static constexpr uint8_t CMD_LASER_CONTROL = 0x20;  // + port_id
-  static constexpr uint8_t CMD_LASER_STATUS  = 0x30;  // + port_id
-
-  // Port ID for this laser instance
-  uint8_t port_id_;
+  static constexpr uint8_t CMD_LASER_CONTROL = 0x20;  
+  static constexpr uint8_t CMD_LASER_STATUS  = 0x30; 
 };
 
 }  // namespace laser_ros2_control

@@ -1,375 +1,425 @@
-// Copyright (c) 2026 UMD Loop
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-
 #include "ccd_ros2_control/ccd_hardware_interface.hpp"
 
-#include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "pluginlib/class_list_macros.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include <algorithm>
-#include <functional>
+#include <sstream>
 
 namespace ccd_ros2_control
 {
 
+void CCDHardwareInterface::logger_function()
+{
+  if (CCDJoints_.empty()) return;
+  const auto & joint = CCDJoints_.front();
+
+  std::ostringstream oss;
+  oss << "\033[2J\033[H \nCCD Logger"
+      << "\n--- HWI Specific ---\n"
+      << "CAN Interface: " << can_interface_
+      << " | CAN ID: 0x" << std::hex << std::uppercase << joint.can_id << std::dec
+      << " | Update Rate: " << update_rate_
+      << " | Logger Rate: " << logger_rate_ << "\n"
+      << "Elapsed Time: " << elapsed_time_ << "\n"
+      << "\n--- Joint Specific ---\n"
+      << "JOINT: " << joint.name << "\n"
+      << "-- Commands --\n"
+      << "Capture Binary: " << joint.capture_binary_cmd
+      << " | Capture Byte: " << joint.capture_byte_cmd << "\n"
+      << "Status Request: " << joint.status_request
+      << " | Maintenance Request: " << joint.maintenance_request << "\n"
+      << "-- State --\n"
+      << "Is Connected: "           << joint.is_connected
+      << " | Command Success: "     << joint.command_success
+      << " | Acquisition Active: "  << joint.acquisition_in_progress
+      << " | Data Ready: "          << joint.data_ready << "\n"
+      << "Frames Received: "        << joint.frames_received
+      << " | Last Frame ID: "       << joint.last_frame_id
+      << " | Status: "              << joint.status << "\n";
+
+  RCLCPP_INFO(rclcpp::get_logger("CCDHardwareInterface"), "%s", oss.str().c_str());
+}
+
+bool CCDHardwareInterface::format_maintenance_command(
+  CANLib::CanFrame & frame, uint32_t can_id, const DecodedCommand & decoded_cmd)
+{
+  frame.data.fill(0);
+  frame.id  = can_id;
+  frame.dlc = 2;
+  frame.data[0] = decoded_cmd.command_id;
+  if (decoded_cmd.u8_data.size() != 1 ||
+      !decoded_cmd.i16_data.empty() ||
+      !decoded_cmd.i32_data.empty())
+  {
+    return false;
+  }
+  frame.data[1] = decoded_cmd.u8_data[0];
+  return true;
+}
+
 hardware_interface::CallbackReturn CCDHardwareInterface::on_init(
   const hardware_interface::HardwareInfo & info)
 {
-  if (hardware_interface::SystemInterface::on_init(info) != 
+  if (hardware_interface::SystemInterface::on_init(info) !=
       hardware_interface::CallbackReturn::SUCCESS)
   {
     return hardware_interface::CallbackReturn::ERROR;
   }
 
-  // Initialize state variables
-  is_connected_ = 0.0;
-  command_success_ = 0.0;
-  acquisition_in_progress_ = 0.0;
-  data_ready_ = 0.0;
-  frames_received_ = 0.0;
-  last_frame_id_ = 0.0;
+  can_interface_ = info_.hardware_parameters.count("can_interface") ?
+    info_.hardware_parameters.at("can_interface") : "can0";
+  update_rate_ = info_.hardware_parameters.count("update_rate") ?
+    std::stoi(info_.hardware_parameters.at("update_rate")) : 10;
+  logger_rate_ = info_.hardware_parameters.count("logger_rate") ?
+    std::stoi(info_.hardware_parameters.at("logger_rate")) : 5;
+  logger_state_ = info_.hardware_parameters.count("logger_state") ?
+    std::stoi(info_.hardware_parameters.at("logger_state")) : 0;
 
-  // Initialize command variables
-  capture_binary_cmd_ = 0.0;
-  capture_byte_cmd_ = 0.0;
-
-  // Initialize internal acquisition state
-  waiting_for_binary_data_ = false;
-  waiting_for_byte_data_ = false;
-  binary_pixels_.assign(3648, 0);
-  byte_pixels_.assign(3648, 0);
-
-  // Parse hardware parameters
-  if (info_.hardware_parameters.count("can_interface")) {
-    can_interface_ = info_.hardware_parameters.at("can_interface");
-  } else {
-    can_interface_ = "can0";
-  }
-
+  uint32_t can_id = 0x100;
   if (info_.hardware_parameters.count("can_id")) {
-    can_id_ = static_cast<uint32_t>(std::stoul(info_.hardware_parameters.at("can_id"), nullptr, 0));
-  } else {
-    can_id_ = 0x100;
+    try {
+      can_id = static_cast<uint32_t>(
+        std::stoul(info_.hardware_parameters.at("can_id"), nullptr, 0));
+    } catch (const std::exception & e) {
+      RCLCPP_ERROR(rclcpp::get_logger("CCDHardwareInterface"),
+        "Failed to parse 'can_id': %s", e.what());
+      return hardware_interface::CallbackReturn::ERROR;
+    }
   }
 
-  can_connected_ = false;
+  CCDJoints_.clear();
+  CCDJoints_.push_back(CCDJoint{
+    info_.gpios[0].name,
+    can_id,
+    // state
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    // command
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    // tracking
+    0.0, 0.0, 0.0, 0.0,
+    // internal
+    false, false, 0.0,
+    {},
+    std::vector<uint8_t>(3648, 0),
+    std::vector<uint8_t>(3648, 0)
+  });
 
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "Initialized CCD on CAN interface %s with ID 0x%X", 
-    can_interface_.c_str(), can_id_);
+  can_connected_       = false;
+  elapsed_time_        = 0.0;
+  elapsed_logger_time_ = 0.0;
+
+  RCLCPP_INFO(rclcpp::get_logger("CCDHardwareInterface"),
+    "CCD initialized on %s, CAN ID 0x%X", can_interface_.c_str(), can_id);
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 hardware_interface::CallbackReturn CCDHardwareInterface::on_configure(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+  const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "Configuring CCD hardware...");
+  auto & joint = CCDJoints_.front();
 
   if (can_connected_) {
     canBus_.close();
     can_connected_ = false;
   }
 
-  if (!canBus_.open(can_interface_, 
-      std::bind(&CCDHardwareInterface::onCanMessage, this, std::placeholders::_1))) 
+  if (!canBus_.open(can_interface_,
+      std::bind(&CCDHardwareInterface::onCanMessage, this, std::placeholders::_1)))
   {
-    RCLCPP_WARN(
-      rclcpp::get_logger("CCDHardwareInterface"),
-      "Failed to open CAN interface %s - running in SIMULATION mode", 
-      can_interface_.c_str());
+    RCLCPP_WARN(rclcpp::get_logger("CCDHardwareInterface"),
+      "Failed to open CAN interface %s", can_interface_.c_str());
     can_connected_ = false;
   } else {
     can_connected_ = true;
-    RCLCPP_INFO(
-      rclcpp::get_logger("CCDHardwareInterface"),
-      "Successfully opened CAN interface %s", can_interface_.c_str());
   }
 
-  is_connected_ = can_connected_ ? 1.0 : 0.0;
-  command_success_ = 0.0;
-  acquisition_in_progress_ = 0.0;
-  data_ready_ = 0.0;
-  frames_received_ = 0.0;
-  last_frame_id_ = 0.0;
-
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "CCD hardware configured (%s)", can_connected_ ? "CAN MODE" : "SIMULATION");
+  joint.is_connected           = can_connected_ ? 1.0 : 0.0;
+  joint.status                 = joint.is_connected;
+  joint.command_success        = 0.0;
+  joint.acquisition_in_progress = 0.0;
+  joint.data_ready             = 0.0;
+  joint.frames_received        = 0.0;
+  joint.last_frame_id          = 0.0;
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-void CCDHardwareInterface::onCanMessage(const CANLib::CanFrame& frame)
+void CCDHardwareInterface::onCanMessage(const CANLib::CanFrame & frame)
 {
-  if (frame.data[0] == CMD_REQUEST_BINARY && frame.dlc >= 2) {
-    command_success_ = static_cast<double>(frame.data[1] ? 1.0 : 0.0);
+  auto & joint = CCDJoints_.front();
 
-    if (frame.data[1]) {
-      waiting_for_binary_data_ = true;
-      waiting_for_byte_data_ = false;
-      acquisition_in_progress_ = 1.0;
-      data_ready_ = 0.0;
-      frames_received_ = 0.0;
-      last_frame_id_ = 0.0;
-      std::fill(binary_pixels_.begin(), binary_pixels_.end(), 0);
-    } else {
-      acquisition_in_progress_ = 0.0;
+  // ACK frame on 0x101 — success/fail for the last request
+  if (frame.id == CAN_RESP_ACK_ID && frame.dlc >= 2) {
+    const uint8_t cmd_byte = frame.data[0];
+    const bool success     = frame.data[1] != 0;
+    joint.command_success  = success ? 1.0 : 0.0;
+    joint.status           = success ? 1.0 : 0.0;
+
+    if (cmd_byte == CMD_REQUEST_BINARY) {
+      if (success) {
+        joint.waiting_for_binary_data  = true;
+        joint.waiting_for_byte_data    = false;
+        joint.acquisition_in_progress  = 1.0;
+        joint.data_ready               = 0.0;
+        joint.frames_received          = 0.0;
+        joint.last_frame_id            = 0.0;
+        std::fill(joint.binary_pixels.begin(), joint.binary_pixels.end(), 0);
+      } else {
+        joint.acquisition_in_progress = 0.0;
+      }
+    } else if (cmd_byte == CMD_REQUEST_BYTE) {
+      if (success) {
+        joint.waiting_for_byte_data    = true;
+        joint.waiting_for_binary_data  = false;
+        joint.acquisition_in_progress  = 1.0;
+        joint.data_ready               = 0.0;
+        joint.frames_received          = 0.0;
+        joint.last_frame_id            = 0.0;
+        std::fill(joint.byte_pixels.begin(), joint.byte_pixels.end(), 0);
+      } else {
+        joint.acquisition_in_progress = 0.0;
+      }
     }
     return;
   }
 
-  if (frame.data[0] == CMD_REQUEST_BYTE && frame.dlc >= 2) {
-    command_success_ = static_cast<double>(frame.data[1] ? 1.0 : 0.0);
-
-    if (frame.data[1]) {
-      waiting_for_byte_data_ = true;
-      waiting_for_binary_data_ = false;
-      acquisition_in_progress_ = 1.0;
-      data_ready_ = 0.0;
-      frames_received_ = 0.0;
-      last_frame_id_ = 0.0;
-      std::fill(byte_pixels_.begin(), byte_pixels_.end(), 0);
-    } else {
-      acquisition_in_progress_ = 0.0;
-    }
-    return;
-  }
-
-  if (waiting_for_binary_data_ && frame.dlc == 8) {
+  // Binary data frames on 0x102
+  if (frame.id == CAN_RESP_BINARY_ID && joint.waiting_for_binary_data && frame.dlc == 8) {
     const uint16_t frame_id = static_cast<uint16_t>(frame.data[0]);
-    last_frame_id_ = static_cast<double>(frame_id);
-    frames_received_ += 1.0;
+    joint.last_frame_id  = static_cast<double>(frame_id);
+    joint.frames_received += 1.0;
 
     const size_t start_idx = static_cast<size_t>(frame_id) * 56;
     for (size_t byte_idx = 0; byte_idx < 7; ++byte_idx) {
       const uint8_t packed = frame.data[1 + byte_idx];
       for (size_t bit = 0; bit < 8; ++bit) {
         const size_t pixel_idx = start_idx + byte_idx * 8 + bit;
-        if (pixel_idx < binary_pixels_.size()) {
-          binary_pixels_[pixel_idx] = static_cast<uint8_t>((packed >> bit) & 0x01);
+        if (pixel_idx < joint.binary_pixels.size()) {
+          joint.binary_pixels[pixel_idx] = static_cast<uint8_t>((packed >> bit) & 0x01);
         }
       }
     }
 
-    // 3648 / 56 = 65 remainder 8, so 66 data frames total
-    if (frames_received_ >= 66.0) {
-      waiting_for_binary_data_ = false;
-      acquisition_in_progress_ = 0.0;
-      data_ready_ = 1.0;
-      RCLCPP_INFO(
-        rclcpp::get_logger("CCDHardwareInterface"),
-        "Binary CCD acquisition complete");
-      return;
+    if (joint.frames_received >= 66.0) {
+      joint.waiting_for_binary_data  = false;
+      joint.acquisition_in_progress  = 0.0;
+      joint.data_ready               = 1.0;
+      RCLCPP_INFO(rclcpp::get_logger("CCDHardwareInterface"), "Binary acquisition complete");
     }
+    return;
   }
 
-  if (waiting_for_byte_data_ && frame.dlc == 8) {
+  // Byte data frames on 0x103
+  if (frame.id == CAN_RESP_BYTE_ID && joint.waiting_for_byte_data && frame.dlc == 8) {
     const uint16_t frame_id =
       static_cast<uint16_t>(frame.data[0]) |
       (static_cast<uint16_t>(frame.data[1]) << 8);
 
-    last_frame_id_ = static_cast<double>(frame_id);
-    frames_received_ += 1.0;
+    joint.last_frame_id   = static_cast<double>(frame_id);
+    joint.frames_received += 1.0;
 
     const size_t start_idx = static_cast<size_t>(frame_id) * 6;
     for (size_t i = 0; i < 6; ++i) {
       const size_t pixel_idx = start_idx + i;
-      if (pixel_idx < byte_pixels_.size()) {
-        byte_pixels_[pixel_idx] = frame.data[2 + i];
+      if (pixel_idx < joint.byte_pixels.size()) {
+        joint.byte_pixels[pixel_idx] = frame.data[2 + i];
       }
     }
 
-    // 3648 / 6 = 608 data frames total
-    if (frames_received_ >= 608.0) {
-      waiting_for_byte_data_ = false;
-      acquisition_in_progress_ = 0.0;
-      data_ready_ = 1.0;
-      RCLCPP_INFO(
-        rclcpp::get_logger("CCDHardwareInterface"),
-        "8-bit CCD acquisition complete");
+    if (joint.frames_received >= 608.0) {
+      joint.waiting_for_byte_data   = false;
+      joint.acquisition_in_progress = 0.0;
+      joint.data_ready              = 1.0;
+      RCLCPP_INFO(rclcpp::get_logger("CCDHardwareInterface"), "8-bit acquisition complete");
     }
+    return;
   }
 }
 
-std::vector<hardware_interface::StateInterface> 
+std::vector<hardware_interface::StateInterface>
 CCDHardwareInterface::export_state_interfaces()
 {
+  auto & joint = CCDJoints_.front();
   std::vector<hardware_interface::StateInterface> state_interfaces;
-
-  const std::string& name = info_.gpios[0].name;
-
-  state_interfaces.emplace_back(
-    hardware_interface::StateInterface(name, "is_connected", &is_connected_));
-  state_interfaces.emplace_back(
-    hardware_interface::StateInterface(name, "command_success", &command_success_));
-  state_interfaces.emplace_back(
-    hardware_interface::StateInterface(name, "acquisition_in_progress", &acquisition_in_progress_));
-  state_interfaces.emplace_back(
-    hardware_interface::StateInterface(name, "data_ready", &data_ready_));
-  state_interfaces.emplace_back(
-    hardware_interface::StateInterface(name, "frames_received", &frames_received_));
-  state_interfaces.emplace_back(
-    hardware_interface::StateInterface(name, "last_frame_id", &last_frame_id_));
-
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "Exported %zu state interfaces", state_interfaces.size());
-
+  state_interfaces.emplace_back(joint.name, "is_connected",            &joint.is_connected);
+  state_interfaces.emplace_back(joint.name, "command_success",         &joint.command_success);
+  state_interfaces.emplace_back(joint.name, "acquisition_in_progress", &joint.acquisition_in_progress);
+  state_interfaces.emplace_back(joint.name, "data_ready",              &joint.data_ready);
+  state_interfaces.emplace_back(joint.name, "frames_received",         &joint.frames_received);
+  state_interfaces.emplace_back(joint.name, "last_frame_id",           &joint.last_frame_id);
+  state_interfaces.emplace_back(joint.name, "status",                  &joint.status);
   return state_interfaces;
 }
 
-std::vector<hardware_interface::CommandInterface> 
+std::vector<hardware_interface::CommandInterface>
 CCDHardwareInterface::export_command_interfaces()
 {
+  auto & joint = CCDJoints_.front();
   std::vector<hardware_interface::CommandInterface> command_interfaces;
-
-  const std::string& name = info_.gpios[0].name;
-
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(name, "capture_binary", &capture_binary_cmd_));
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(name, "capture_byte", &capture_byte_cmd_));
-
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "Exported %zu command interfaces", command_interfaces.size());
-
+  command_interfaces.emplace_back(joint.name, "capture_binary",         &joint.capture_binary_cmd);
+  command_interfaces.emplace_back(joint.name, "capture_byte",           &joint.capture_byte_cmd);
+  command_interfaces.emplace_back(joint.name, "status_request",         &joint.status_request);
+  command_interfaces.emplace_back(joint.name, "maintenance_request",    &joint.maintenance_request);
+  command_interfaces.emplace_back(joint.name, "maintenance_frame_high", &joint.maintenance_frame_high);
+  command_interfaces.emplace_back(joint.name, "maintenance_frame_low",  &joint.maintenance_frame_low);
+  command_interfaces.emplace_back(joint.name, "maintenance_data_count", &joint.maintenance_data_count);
   return command_interfaces;
 }
 
 hardware_interface::CallbackReturn CCDHardwareInterface::on_activate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+  const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "Activating CCD hardware...");
-
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 hardware_interface::CallbackReturn CCDHardwareInterface::on_deactivate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+  const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "Deactivating CCD hardware...");
-
-  acquisition_in_progress_ = 0.0;
-  waiting_for_binary_data_ = false;
-  waiting_for_byte_data_ = false;
+  auto & joint = CCDJoints_.front();
+  joint.acquisition_in_progress  = 0.0;
+  joint.waiting_for_binary_data  = false;
+  joint.waiting_for_byte_data    = false;
 
   if (can_connected_) {
     canBus_.close();
-    can_connected_ = false;
-    is_connected_ = 0.0;
+    can_connected_     = false;
+    joint.is_connected = 0.0;
+    joint.status       = 0.0;
   }
-
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 hardware_interface::CallbackReturn CCDHardwareInterface::on_cleanup(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+  const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "Cleaning up CCD hardware...");
-
+  auto & joint = CCDJoints_.front();
   if (can_connected_) {
     canBus_.close();
   }
-
-  can_connected_ = false;
-  is_connected_ = 0.0;
-  acquisition_in_progress_ = 0.0;
-  waiting_for_binary_data_ = false;
-  waiting_for_byte_data_ = false;
-
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "CCD hardware cleanup complete");
-
+  can_connected_                = false;
+  joint.is_connected            = 0.0;
+  joint.status                  = 0.0;
+  joint.acquisition_in_progress = 0.0;
+  joint.waiting_for_binary_data = false;
+  joint.waiting_for_byte_data   = false;
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 hardware_interface::CallbackReturn CCDHardwareInterface::on_shutdown(
   const rclcpp_lifecycle::State & previous_state)
 {
-  RCLCPP_INFO(
-    rclcpp::get_logger("CCDHardwareInterface"),
-    "Shutting down CCD hardware...");
-
   return on_cleanup(previous_state);
 }
 
 hardware_interface::return_type CCDHardwareInterface::read(
-  const rclcpp::Time &,
-  const rclcpp::Duration &)
+  const rclcpp::Time &, const rclcpp::Duration &)
 {
   return hardware_interface::return_type::OK;
 }
 
 hardware_interface::return_type CCDHardwareInterface::write(
-  const rclcpp::Time &,
-  const rclcpp::Duration &)
+  const rclcpp::Time &, const rclcpp::Duration & period)
 {
+  auto & joint = CCDJoints_.front();
 
-  if (capture_binary_cmd_ > 0.5) {
-    if (can_connected_) {
-      can_tx_frame_ = CANLib::CanFrame();
-      can_tx_frame_.id = can_id_;
-      can_tx_frame_.dlc = 2;
-      can_tx_frame_.data[0] = CMD_REQUEST_BINARY;
-      can_tx_frame_.data[1] = 1;
-      canBus_.send(can_tx_frame_);
-    }
-
-    data_ready_ = 0.0;
-    command_success_ = 0.0;
-    capture_binary_cmd_ = 0.0;
-
-    RCLCPP_INFO(
-      rclcpp::get_logger("CCDHardwareInterface"),
-      "Requested binary CCD acquisition%s",
-      can_connected_ ? "" : " (simulated)");
+  elapsed_time_        += period.seconds();
+  elapsed_logger_time_ += period.seconds();
+  if (logger_rate_ > 0 &&
+      elapsed_logger_time_ > (1.0 / static_cast<double>(logger_rate_)))
+  {
+    elapsed_logger_time_ = 0.0;
+    if (logger_state_ == 1) logger_function();
   }
 
-  if (capture_byte_cmd_ > 0.5) {
+  // --- Capture commands (one-shot on rising edge) ---
+  if (joint.capture_binary_cmd > 0.5) {
     if (can_connected_) {
       can_tx_frame_ = CANLib::CanFrame();
-      can_tx_frame_.id = can_id_;
-      can_tx_frame_.dlc = 2;
-      can_tx_frame_.data[0] = CMD_REQUEST_BYTE;
-      can_tx_frame_.data[1] = 1;
+      can_tx_frame_.id      = joint.can_id;
+      can_tx_frame_.dlc     = 2;
+      can_tx_frame_.data[0] = CMD_REQUEST_BINARY;
+      can_tx_frame_.data[1] = CONFIRM_SEND;
       canBus_.send(can_tx_frame_);
     }
+    joint.data_ready          = 0.0;
+    joint.command_success     = 0.0;
+    joint.capture_binary_cmd  = 0.0;
+  }
 
-    data_ready_ = 0.0;
-    command_success_ = 0.0;
-    capture_byte_cmd_ = 0.0;
+  if (joint.capture_byte_cmd > 0.5) {
+    if (can_connected_) {
+      can_tx_frame_ = CANLib::CanFrame();
+      can_tx_frame_.id      = joint.can_id;
+      can_tx_frame_.dlc     = 2;
+      can_tx_frame_.data[0] = CMD_REQUEST_BYTE;
+      can_tx_frame_.data[1] = CONFIRM_SEND;
+      canBus_.send(can_tx_frame_);
+    }
+    joint.data_ready       = 0.0;
+    joint.command_success  = 0.0;
+    joint.capture_byte_cmd = 0.0;
+  }
 
+  // --- Status request: one-shot (negative) or heartbeat (positive Hz) ---
+  const double curr_status_req = joint.status_request;
+  if (curr_status_req < 0.0 && joint.prev_status_request >= 0.0) {
+    if (can_connected_) {
+      can_tx_frame_ = CANLib::CanFrame();
+      can_tx_frame_.id      = joint.can_id;
+      can_tx_frame_.dlc     = 2;
+      can_tx_frame_.data[0] = CMD_REQUEST_BINARY;
+      can_tx_frame_.data[1] = CONFIRM_SEND;
+      canBus_.send(can_tx_frame_);
+    }
+  } else if (curr_status_req > 0.0) {
+    joint.elapsed_status_request_time += period.seconds();
+    if (joint.elapsed_status_request_time > (1.0 / curr_status_req)) {
+      joint.elapsed_status_request_time = 0.0;
+      if (can_connected_) {
+        can_tx_frame_ = CANLib::CanFrame();
+        can_tx_frame_.id      = joint.can_id;
+        can_tx_frame_.dlc     = 2;
+        can_tx_frame_.data[0] = CMD_REQUEST_BINARY;
+        can_tx_frame_.data[1] = CONFIRM_SEND;
+        canBus_.send(can_tx_frame_);
+      }
+    }
+  }
+  joint.prev_status_request = curr_status_req;
 
-    RCLCPP_INFO(
-      rclcpp::get_logger("CCDHardwareInterface"),
-      "Requested byte CCD acquisition%s",
-      can_connected_ ? "" : " (simulated)");
+  // --- Maintenance request: same one-shot/heartbeat pattern as servo ---
+  auto doubles_to_payload = [](double high, double low) -> int64_t {
+    return static_cast<int64_t>(
+      (static_cast<uint64_t>(high) << 32) | static_cast<uint64_t>(low));
+  };
+
+  joint.maintenance_frame = static_cast<double>(doubles_to_payload(
+    joint.maintenance_frame_high, joint.maintenance_frame_low));
+  const auto decoded_maintenance_cmd = unpack_command_full(
+    static_cast<int32_t>(joint.maintenance_data_count),
+    static_cast<int64_t>(joint.maintenance_frame));
+
+  CANLib::CanFrame maint_frame;
+  if (format_maintenance_command(maint_frame, joint.can_id, decoded_maintenance_cmd)) {
+    const double curr_maint_req = joint.maintenance_request;
+    if (curr_maint_req < 0.0 && joint.prev_maintenance_request >= 0.0) {
+      if (can_connected_) canBus_.send(maint_frame);
+    } else if (curr_maint_req > 0.0) {
+      joint.elapsed_maintenance_request_time += period.seconds();
+      if (joint.elapsed_maintenance_request_time > (1.0 / curr_maint_req)) {
+        joint.elapsed_maintenance_request_time = 0.0;
+        if (can_connected_) canBus_.send(maint_frame);
+      }
+    }
+    joint.prev_maintenance_request = joint.maintenance_request;
   }
 
   return hardware_interface::return_type::OK;
 }
 
 }  // namespace ccd_ros2_control
-
-#include "pluginlib/class_list_macros.hpp"
 
 PLUGINLIB_EXPORT_CLASS(
   ccd_ros2_control::CCDHardwareInterface,
