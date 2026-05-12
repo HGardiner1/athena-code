@@ -11,7 +11,7 @@
       </hardware>
 
       <joint name="propulsion_fl_joint">
-        <param name="node_id">0x14A</param>
+        <param name="node_id">0x146</param>
         <param name="gear_ratio">1</param>
         <param name="joint_orientation">-1.0</param>
         <param name="operating_velocity">150</param> <!-- motor dps -->
