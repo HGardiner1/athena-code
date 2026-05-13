@@ -140,6 +140,7 @@ sensor_diode_gpio_controller:
           - wavelength_intensity
           - command_success
           - is_connected
+          - status
 
 fluoro_led_gpio_controller:
   ros__parameters:
@@ -182,6 +183,9 @@ motor_status_controller:
       - science_limit_switch
     command_interfaces:
       spectrometry_laser:
+        interfaces:
+          - status_request
+      sensor_diode:
         interfaces:
           - status_request
       fluoro_led:
@@ -238,10 +242,16 @@ motor_status_controller:
       servo_auger_lift:
         interfaces:
           - status
+      sensor_diode:
+        interfaces:
+          - status
       fluoro_led:
         interfaces:
           - status
       science_limit_switch:
+        interfaces:
+          - status
+      spectrometry_laser:
         interfaces:
           - status
     publish_rate: 10.0
