@@ -136,6 +136,13 @@ controller_interface::CallbackReturn CCDSnapshotController::on_configure(
       std::placeholders::_1,
       std::placeholders::_2));
 
+  pixel_subscriber_ = get_node()->create_subscription<raman_msgs::msg::RamanSpectrum>(
+    "/raman/raw_pixels",
+    rclcpp::QoS(1).reliable(),
+    [this](const raman_msgs::msg::RamanSpectrum::SharedPtr msg) {
+      pixel_buffer_.writeFromNonRT(msg->intensities);
+  });
+
   status_publisher_ = get_node()->create_publisher<StatusMsg>(
     status_publish_topic_, rclcpp::QoS(10));
 
@@ -233,7 +240,8 @@ controller_interface::return_type CCDSnapshotController::update(
   }
 
   if (snapshot_in_progress_) {
-    if (get_state_bool(STATE_DATA_READY)) {
+    if (get_state_bool(STATE_DATA_READY) ||
+      get_state_double(STATE_FRAMES_RECEIVED) >= static_cast<double>(expected_total_frames_ - 1)) {
       if (!snapshot_complete_published_) {
         publish_spectrum(time);
         publish_status(time);
@@ -378,17 +386,11 @@ std::vector<double> CCDSnapshotController::make_wavenumber_axis() const
 
 std::vector<double> CCDSnapshotController::get_latest_intensities() const
 {
-  // TODO:
-  // Your current HWI only exposes scalar ros2_control states.
-  // It does NOT expose the completed 3648-value CCD buffer to this controller yet.
-  //
-  // For now this publishes a correctly-sized placeholder vector so the RamanSpectrum
-  // pipeline, GUI subscription, and service flow can be tested.
-  //
-  // Next required HWI change:
-  // expose byte_pixels_ after acquisition completion, or publish RamanSpectrum
-  // directly from the HWI/driver layer.
-
+  auto buffer_ptr = pixel_buffer_.readFromRT();
+  if (buffer_ptr && !(*buffer_ptr).empty()) {
+    return *buffer_ptr;
+  }
+  // Fallback to zeros if buffer not yet populated
   return std::vector<double>(static_cast<size_t>(num_photodiodes_), 0.0);
 }
 

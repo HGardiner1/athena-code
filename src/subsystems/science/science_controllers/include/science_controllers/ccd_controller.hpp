@@ -32,6 +32,7 @@
 // Replace later with your real custom messages
 #include "raman_msgs/msg/raman_spectrum.hpp"
 
+
 namespace science_controllers
 {
 
@@ -132,6 +133,10 @@ protected:
   std::unique_ptr<StatusPublisher> realtime_status_publisher_;
 
   rclcpp::Publisher<raman_msgs::msg::RamanSpectrum>::SharedPtr spectrum_publisher_;
+
+  // Subscribers
+  rclcpp::Subscription<raman_msgs::msg::RamanSpectrum>::SharedPtr pixel_subscriber_;
+  realtime_tools::RealtimeBuffer<std::vector<double>> pixel_buffer_;
 
   bool snapshot_requested_;
   bool snapshot_in_progress_;

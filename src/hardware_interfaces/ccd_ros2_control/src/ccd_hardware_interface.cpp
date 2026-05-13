@@ -143,6 +143,10 @@ hardware_interface::CallbackReturn CCDHardwareInterface::on_configure(
   joint.frames_received        = 0.0;
   joint.last_frame_id          = 0.0;
 
+  pixel_pub_node_ = rclcpp::Node::make_shared("ccd_hwi_pixel_publisher");
+  pixel_publisher_ = pixel_pub_node_->create_publisher<raman_msgs::msg::RamanSpectrum>(
+    "/raman/raw_pixels", rclcpp::QoS(1).reliable());
+
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
@@ -232,10 +236,26 @@ void CCDHardwareInterface::onCanMessage(const CANLib::CanFrame & frame)
       joint.waiting_for_byte_data   = false;
       joint.acquisition_in_progress = 0.0;
       joint.data_ready              = 1.0;
+
+      // Publish completed pixel buffer
+      if (pixel_publisher_) {
+        raman_msgs::msg::RamanSpectrum msg;
+        msg.header.stamp    = rclcpp::Clock().now();
+        msg.header.frame_id = "ccd_sensor";
+        msg.spectrometer_id = "pda_spectrometer";
+        msg.accumulations   = 1;
+        msg.intensities.reserve(joint.byte_pixels.size());
+        for (const auto & px : joint.byte_pixels) {
+          msg.intensities.push_back(static_cast<double>(px));
+        }
+        pixel_publisher_->publish(msg);
+        rclcpp::spin_some(pixel_pub_node_);
+      }
       RCLCPP_INFO(rclcpp::get_logger("CCDHardwareInterface"), "8-bit acquisition complete");
     }
     return;
   }
+
 }
 
 std::vector<hardware_interface::StateInterface>

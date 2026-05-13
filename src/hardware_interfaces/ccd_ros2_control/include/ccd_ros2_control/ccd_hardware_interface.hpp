@@ -15,6 +15,9 @@
 #include "rclcpp_lifecycle/state.hpp"
 #include "umdloop_can_library/CanFrame.hpp"
 #include "umdloop_can_library/SocketCanBus.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "raman_msgs/msg/raman_spectrum.hpp"
 
 namespace CANLib
 {
@@ -116,6 +119,9 @@ private:
   double elapsed_time_;
   double elapsed_logger_time_;
 
+  rclcpp::Node::SharedPtr pixel_pub_node_;
+  rclcpp::Publisher<raman_msgs::msg::RamanSpectrum>::SharedPtr pixel_publisher_;
+
   std::vector<CCDJoint> CCDJoints_;
 
   static constexpr uint8_t CMD_REQUEST_BINARY = 0x20;
@@ -126,6 +132,7 @@ private:
   static constexpr uint32_t CAN_RESP_ACK_ID    = 0x101;
   static constexpr uint32_t CAN_RESP_BINARY_ID = 0x102;
   static constexpr uint32_t CAN_RESP_BYTE_ID   = 0x103;
+  static constexpr uint32_t CAN_PIXEL_PUB_ID = 0x104;
 
   inline DecodedCommand unpack_command_full(int32_t counts_in, int64_t payload_in)
   {
