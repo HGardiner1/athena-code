@@ -43,6 +43,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument('use_3dof', default_value='false', choices=['true', 'false']),
         DeclareLaunchArgument('deactivate_talon', default_value='false', choices=['true', 'false']),
+        DeclareLaunchArgument('can_interface', default_value='can1'),
         OpaqueFunction(function=launch_setup),
     ])
 
@@ -55,6 +56,7 @@ def launch_setup(context, *args, **kwargs):
     robot_controller = LaunchConfiguration('robot_controller').perform(context)
     use_3dof = LaunchConfiguration('use_3dof').perform(context)
     deactivate_talon = LaunchConfiguration('deactivate_talon').perform(context)
+    can_interface = LaunchConfiguration('can_interface').perform(context)
 
     drive_share = get_package_share_directory('drive_bringup')
     arm_bringup_share = get_package_share_directory('arm_bringup')
@@ -73,6 +75,7 @@ def launch_setup(context, *args, **kwargs):
             'use_mock_hardware': use_mock_hardware,
             'mock_sensor_commands': mock_sensor_commands,
             'robot_controller': robot_controller,
+            'can_interface': can_interface,
         }.items(),
     )
 
@@ -103,6 +106,7 @@ def launch_setup(context, *args, **kwargs):
         ' mock_sensor_commands:=', mock_sensor_commands,
         ' use_3dof:=', use_3dof,
         ' deactivate_talon:=', deactivate_talon, ' ',
+        ' can_interface:=', can_interface, ' ',        
     ])
 
     use_3dof_bool = use_3dof.lower() == 'true'

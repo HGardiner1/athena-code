@@ -99,6 +99,11 @@ def generate_launch_description():
             choices=['true', 'false'],
             description='Launch the Nav2 config GUI.',
         ),
+        DeclareLaunchArgument(
+            'can_interface',
+            default_value='can1',
+            description='CAN interface to use for hardware interfaces.',
+        ),
         OpaqueFunction(function=launch_setup),
     ])
 
@@ -116,6 +121,7 @@ def launch_setup(context, *args, **kwargs):
     use_respawn = LaunchConfiguration('use_respawn').perform(context)
     log_level = LaunchConfiguration('log_level').perform(context)
     use_config = LaunchConfiguration('use_config').perform(context)
+    can_interface = LaunchConfiguration('can_interface').perform(context)
 
     drive_bringup = get_package_share_directory('drive_bringup')
     nav_bringup = get_package_share_directory('nav_bringup')
@@ -131,6 +137,7 @@ def launch_setup(context, *args, **kwargs):
             'use_mock_hardware': use_mock_hardware,
             'mock_sensor_commands': mock_sensor_commands,
             'robot_controller': robot_controller,
+            'can_interface': can_interface,
         }.items(),
     )
 
@@ -147,6 +154,7 @@ def launch_setup(context, *args, **kwargs):
             'use_respawn': use_respawn,
             'log_level': log_level,
             'use_config': use_config,
+            'can_interface': can_interface,
         }.items(),
     )
 

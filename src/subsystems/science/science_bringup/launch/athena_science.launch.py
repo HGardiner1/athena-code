@@ -100,6 +100,13 @@ def generate_launch_description():
             description="Robot controller to start.",
         )
     )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "can_interface",
+            default_value="can0",
+            description="CAN interface to use for hardware interfaces.",
+        )
+    )
 
     # Initialize Arguments
     runtime_config_package = LaunchConfiguration("runtime_config_package")
@@ -111,6 +118,7 @@ def generate_launch_description():
     mock_sensor_commands = LaunchConfiguration("mock_sensor_commands")
     robot_controller = LaunchConfiguration("robot_controller")
     deactivate_talon = LaunchConfiguration("deactivate_talon")
+    can_interface = LaunchConfiguration("can_interface")
 
     # Get URDF via xacro
     robot_description_content = Command(
@@ -132,6 +140,9 @@ def generate_launch_description():
             " ",
             "deactivate_talon:=",
             deactivate_talon,
+            " ",
+            "can_interface:=",
+            can_interface,
         ]
     )
 
