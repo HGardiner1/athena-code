@@ -93,7 +93,7 @@ protected:
   double get_state_double(size_t index) const;
 
   std::vector<double> make_wavenumber_axis() const;
-  std::vector<double> get_latest_intensities() const;
+  std::vector<double> get_latest_intensities();
 
   std::string ccd_name_;
   std::vector<std::string> command_interface_names_;
@@ -110,11 +110,10 @@ protected:
   int num_photodiodes_;
   double wavenumber_min_;
   double wavenumber_max_;
-  
   double publish_rate_;
   double acquisition_timeout_sec_;
   int expected_total_frames_;
-
+  bool pixel_data_ready_ = false;
 
   struct SnapshotRequest
   {

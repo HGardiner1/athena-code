@@ -243,9 +243,15 @@ controller_interface::return_type CCDSnapshotController::update(
     if (get_state_bool(STATE_DATA_READY) ||
       get_state_double(STATE_FRAMES_RECEIVED) >= static_cast<double>(expected_total_frames_ - 1)) {
       if (!snapshot_complete_published_) {
+        if (!pixel_data_ready_) {
+          pixel_data_ready_ = true;
+          return controller_interface::return_type::OK;
+        }
+
         publish_spectrum(time);
         publish_status(time);
         snapshot_complete_published_ = true;
+        pixel_data_ready_ = false;
       }
 
       snapshot_requested_ = false;
@@ -297,7 +303,7 @@ void CCDSnapshotController::handle_snapshot_request(
   response->message = "CCD snapshot request accepted";
 }
 
-void CCDSnapshotController::publish_status(const rclcpp::Time & time)
+void CCDSnapshotController::publish_status(const rclcpp::Time & /*time*/)
 {
   if (!realtime_status_publisher_ || !realtime_status_publisher_->trylock()) {
     return;
@@ -384,7 +390,7 @@ std::vector<double> CCDSnapshotController::make_wavenumber_axis() const
   return axis;
 }
 
-std::vector<double> CCDSnapshotController::get_latest_intensities() const
+std::vector<double> CCDSnapshotController::get_latest_intensities()
 {
   auto buffer_ptr = pixel_buffer_.readFromRT();
   if (buffer_ptr && !(*buffer_ptr).empty()) {
