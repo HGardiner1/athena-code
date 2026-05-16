@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="rotary_encoder_ros2_control" params="name">
+  <xacro:macro name="rotary_encoder_ros2_control" params="name can_interface:=can0">
     <ros2_control name="${name}" type="system">
       <hardware>
         <plugin>rotary_encoder_ros2_control/RotaryEncoderHardwareInterface</plugin>
-        <param name="can_interface">can1</param>
+        <param name="can_interface">${can_interface}</param>
         <param name="can_id">0x130</param>
         <param name="update_rate">10</param>
         <param name="logger_rate">5</param>

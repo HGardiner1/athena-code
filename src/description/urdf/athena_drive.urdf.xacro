@@ -8,6 +8,7 @@
   <xacro:arg name="sim_gazebo" default="true"/>
   <xacro:arg name="simulation_controllers" default=""/>
   <xacro:arg name="deactivate_odrive" default="false"/>
+  <xacro:arg name="can_interface" default="can0"/>
 
 
   <xacro:include filename="$(find description)/urdf/athena_drive/athena_drive_macro.xacro"/>
@@ -72,16 +73,16 @@
   <xacro:unless value="$(arg use_mock_hardware)">
 
     <!-- ODrives-->
-    <xacro:odrive_ros2_control name="odrive" deactivate_odrive="$(arg deactivate_odrive)"/>
+    <xacro:odrive_ros2_control name="odrive" deactivate_odrive="$(arg deactivate_odrive)" can_interface="$(arg can_interface)"/>
 
     <!-- RMD -->
-    <xacro:rmd_ros2_control name="rmd"/>
+    <xacro:rmd_ros2_control name="rmd" can_interface="$(arg can_interface)"/>
 
     <!-- LED status indicator (GPIO-based) -->
-    <xacro:led_ros2_control name="drive_led" can_interface="can0"/>
+    <xacro:led_ros2_control name="drive_led" can_interface="$(arg can_interface)"/>
 
     <!-- PowerModule (CAN-based) -->
-    <xacro:power_module_ros2_control name="drive_power_module" can_interface="can0"/>
+    <xacro:power_module_ros2_control name="drive_power_module" can_interface="$(arg can_interface)"/>
   </xacro:unless>
 
   

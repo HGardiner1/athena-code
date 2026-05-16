@@ -1,4 +1,4 @@
-controller_manager:
+/**/controller_manager:
   ros__parameters:
     update_rate: 100  # Hz
 
@@ -42,7 +42,7 @@ controller_manager:
       type: forward_command_controller/ForwardCommandController
     
 
-twodof_joint_trajectory_controller:
+/**/twodof_joint_trajectory_controller:
   ros__parameters:
     joints:
       - base_yaw
@@ -94,7 +94,7 @@ twodof_joint_trajectory_controller:
       #   trajectory: 0.05
       #   goal: 0.03
 
-threedof_joint_trajectory_controller:
+/**/threedof_joint_trajectory_controller:
   ros__parameters:
     joints:
       - base_yaw
@@ -129,7 +129,7 @@ threedof_joint_trajectory_controller:
       # If set to zero, the controller will wait a potentially infinite amount of time.
       goal_time: 10.0
 
-arm_velocity_controller:
+/**/arm_velocity_controller:
   ros__parameters:
     joints:
       - base_yaw
@@ -141,14 +141,14 @@ arm_velocity_controller:
       - actuator
     interface_name: velocity
 
-cam_position_controller:
+/**/cam_position_controller:
   ros__parameters:
     joints:
       - cam_0
       - cam_1
     interface_name: position
 
-rotary_encoder_state_request_controller:
+/**/rotary_encoder_state_request_controller:
   ros__parameters:
     joints:
       - base_yaw_encoder
@@ -156,7 +156,7 @@ rotary_encoder_state_request_controller:
       - shoulder_pitch_encoder
     interface_name: state_request
 
-manual_arm_cylindrical_controller:
+/**/manual_arm_cylindrical_controller:
   ros__parameters:
     joints:
       - base_yaw
@@ -172,7 +172,7 @@ manual_arm_cylindrical_controller:
       - 0.53
       - 0.22
 
-manual_arm_joint_by_joint_controller:
+/**/manual_arm_joint_by_joint_controller:
   ros__parameters:
     joints:
       - base_yaw
@@ -185,7 +185,7 @@ manual_arm_joint_by_joint_controller:
       - 0.05148721
     virtual_four_bar_coupling_ratio: 1.0
 
-manual_2dof_wrist_joint_by_joint_controller:
+/**/manual_2dof_wrist_joint_by_joint_controller:
   ros__parameters:
     joints:
       - wrist_pitch
@@ -195,7 +195,7 @@ manual_2dof_wrist_joint_by_joint_controller:
       - 0.785398    # 45 dps
       - 0.785398
 
-manual_3dof_wrist_joint_by_joint_controller:
+/**/manual_3dof_wrist_joint_by_joint_controller:
   ros__parameters:
     joints:
       - wrist_motor_a
@@ -207,7 +207,7 @@ manual_3dof_wrist_joint_by_joint_controller:
       - 0.785398    # TODO
       - 0.785398    # TODO
 
-manual_end_effector_gripper_claw_controller:
+/**/manual_end_effector_gripper_claw_controller:
   ros__parameters:
     velocity_joints:
       - gripper_claw
@@ -231,7 +231,7 @@ manual_end_effector_gripper_claw_controller:
 # - motor_temperature
 # - torque_current
 # - status
-two_dof_motor_status_controller:
+/**/two_dof_motor_status_controller:
   ros__parameters:
     joints:
       - base_yaw
@@ -295,7 +295,7 @@ two_dof_motor_status_controller:
           - status
     publish_rate: 10.0
 
-three_dof_motor_status_controller:
+/**/three_dof_motor_status_controller:
   ros__parameters:
     joints:
       - base_yaw
