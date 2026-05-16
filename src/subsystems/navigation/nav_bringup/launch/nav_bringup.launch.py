@@ -25,6 +25,7 @@ def generate_launch_description():
     use_respawn       = LaunchConfiguration('use_respawn')
     log_level         = LaunchConfiguration('log_level')
     use_config        = LaunchConfiguration('use_config')
+    can_interface     = LaunchConfiguration('can_interface')
 
     use_localizer = PythonExpression(
         ["'false' if '", use_zed_localizer, "' == 'true' else 'true'"]
@@ -38,6 +39,9 @@ def generate_launch_description():
         PathJoinSubstitution([
             FindPackageShare('description'), 'urdf', 'athena_drive.urdf.xacro'
         ]),
+        ' ',
+        'can_interface:=',
+        can_interface,
     ])
 
     robot_state_publisher = Node(
@@ -132,6 +136,11 @@ def generate_launch_description():
             default_value='false',
             choices=['true', 'false'],
             description='Launch the Nav2 config GUI',
+        ),
+        DeclareLaunchArgument(
+            'can_interface',
+            default_value='can0',
+            description='CAN interface to use for hardware interfaces.',
         ),
     
         robot_state_publisher,

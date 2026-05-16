@@ -1,4 +1,4 @@
-controller_manager:
+/**/controller_manager:
   ros__parameters:
     update_rate: 100  # Hz
 
@@ -35,7 +35,7 @@ controller_manager:
     motor_status_controller:
       type: general_controllers/MotorStatusController
 
-joint_group_position_controller:                
+/**/joint_group_position_controller:
   ros__parameters:
     joints:
       - stepper_motor_a
@@ -51,7 +51,7 @@ joint_group_position_controller:
       - servo_auger_lift
     interface_name: position
 
-joint_group_velocity_controller:                 
+/**/joint_group_velocity_controller:
   ros__parameters:
     joints:
       - stepper_motor_a
@@ -67,7 +67,7 @@ joint_group_velocity_controller:
       - servo_auger_lift
     interface_name: velocity
 
-science_controller:
+/**/science_controller:
   ros__parameters:
     # Pumps
     pump_a: "stepper_motor_a"
@@ -111,7 +111,7 @@ ccd_controller:
     expected_total_frames: 609
 
 # Laser GPIO Controller Configuration
-laser_gpio_controller:
+/**/laser_gpio_controller:
   ros__parameters:
     gpios:
       - spectrometry_laser
@@ -162,7 +162,7 @@ fluoro_led_gpio_controller:
 # - motor_temperature
 # - torque_current
 # - status
-motor_status_controller:
+/**/motor_status_controller:
   ros__parameters:
     joints:
       - stepper_motor_a
