@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/JointStatus.msg"
   "msg/SystemInfo.msg"
   "msg/Heading.msg"
+  "msg/LedStatus.msg"
   "srv/SetController.srv"
   "srv/StatusReq.srv"
   "srv/MaintenanceReq.srv"
