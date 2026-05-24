@@ -99,7 +99,7 @@ if(BUILD_TESTING)
 
    add_rostest_with_parameters_gmock(test_athena_science_manual test/test_athena_science_manual.cpp ${CMAKE_CURRENT_SOURCE_DIR}/test/athena_science_manual_params.yaml)
    target_include_directories(test_athena_science_manual PRIVATE include)
-   target_link_libraries(test_athena_science_manual athena_science_manual)
+   target_link_libraries(test_athena_science_manual science_manual)
    ament_target_dependencies(
      test_athena_science_manual
      controller_interface
@@ -108,7 +108,7 @@ if(BUILD_TESTING)
 
    add_rostest_with_parameters_gmock(test_athena_science_manual_preceeding test/test_athena_science_manual_preceeding.cpp ${CMAKE_CURRENT_SOURCE_DIR}/test/athena_science_manual_preceeding_params.yaml)
    target_include_directories(test_athena_science_manual_preceeding PRIVATE include)
-   target_link_libraries(test_athena_science_manual_preceeding athena_science_manual)
+   target_link_libraries(test_athena_science_manual_preceeding science_manual)
    ament_target_dependencies(
      test_athena_science_manual_preceeding
      controller_interface
