@@ -22,6 +22,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Heading.msg"
   "msg/RamanPeaks.msg"
   "msg/RamanSpectrum.msg"
+  "msg/LedStatus.msg"
   "srv/SetController.srv"
   "srv/StatusReq.srv"
   "srv/MaintenanceReq.srv"
