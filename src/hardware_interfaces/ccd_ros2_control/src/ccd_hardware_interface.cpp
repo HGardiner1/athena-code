@@ -126,7 +126,7 @@ hardware_interface::CallbackReturn CCDHardwareInterface::on_configure(
   }
 
   if (!canBus_.open(can_interface_,
-      std::bind(&CCDHardwareInterface::onCanMessage, this, std::placeholders::_1)))
+      std::bind(&CCDHardwareInterface::on_can_message, this, std::placeholders::_1)))
   {
     RCLCPP_WARN(rclcpp::get_logger("CCDHardwareInterface"),
       "Failed to open CAN interface %s", can_interface_.c_str());
@@ -150,7 +150,7 @@ hardware_interface::CallbackReturn CCDHardwareInterface::on_configure(
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-void CCDHardwareInterface::onCanMessage(const CANLib::CanFrame & frame)
+void CCDHardwareInterface::on_can_message(const CANLib::CanFrame & frame)
 {
   auto & joint = CCDJoints_.front();
 

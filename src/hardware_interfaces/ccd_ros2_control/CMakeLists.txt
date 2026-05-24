@@ -52,7 +52,6 @@ ament_target_dependencies(
   rclcpp_lifecycle
   realtime_tools
   msgs
-  raman_msgs 
 )
 
 # Export hardware plugins
