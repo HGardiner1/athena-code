@@ -47,10 +47,10 @@
     <xacro:laser_ros2_control name="spectrometry_laser" can_interface="$(arg can_interface)"/>
 
     <!-- Import CCD ros2_control description (CAN-based) -->
-    <xacro:ccd_ros2_control name="spectrometry_ccd"/>
+    <xacro:ccd_ros2_control name="spectrometry_ccd" can_interface="$(arg can_interface)"/>
 
     <!-- Import sensor diode ros2_control description (CAN-based) -->
-    <xacro:sensor_diode_ros2_control name="sensor_diode"/>
+    <xacro:sensor_diode_ros2_control name="sensor_diode" can_interface="$(arg can_interface)"/>
 
     <!-- Import LED and limit switch ros2_control descriptions -->
     <xacro:science_led_ros2_control name="fluoro_led_hwi" can_interface="$(arg can_interface)"/>
