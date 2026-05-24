@@ -6,7 +6,7 @@
 // Unauthorized copying of this file, via any medium is strictly prohibited.
 // The file is considered confidential.
 
-#include "science_controllers/science_controller.hpp"
+#include "science_controllers/science_manual.hpp"
 #include "science_controllers/science_manual_parameters.hpp"
 
 #include <algorithm>

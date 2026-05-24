@@ -18,7 +18,7 @@ Source of this file are templates in
 [RosTeamWorkspace](https://github.com/StoglRobotics/ros_team_workspace) repository.
 -->
 
-<library path="libscience_manual">
+<library path="science_manual">
   <class name="science_controllers/ScienceManual"
          type="science_controllers::ScienceManual" base_class_type="controller_interface::ControllerInterface">
   <description>
