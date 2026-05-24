@@ -33,17 +33,6 @@ jobs:
           rosdep install --from-paths . --ignore-src -r -y
         shell: bash
 
-      - name: Create raman_msgs symlink
-      run: |
-          ln -s $GITHUB_WORKSPACE/src/msgs/raman_msgs $GITHUB_WORKSPACE/../raman_msgs
-        shell: bash
-
-      - name: Build raman_msgs first
-        run: |
-          source /opt/ros/humble/setup.bash
-          colcon build --packages-select raman_msgs
-        shell: bash
-
       - name: Build workspace
         run: |
           source /opt/ros/humble/setup.bash
