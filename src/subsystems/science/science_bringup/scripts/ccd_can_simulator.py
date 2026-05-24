@@ -205,7 +205,6 @@ def simulate_byte_acquisition(sock: socket.socket, port_id: int):
     print(f"[SIM] 8-bit acquisition complete — {BYTE_FRAMES} frames sent")
 
 
-# ── Main loop ────────────────────────────────────────────────────────────────
 
 def run_simulator(interface: str, force_mode: str = None, delay: float = INTER_FRAME_DELAY_S):
     global INTER_FRAME_DELAY_S

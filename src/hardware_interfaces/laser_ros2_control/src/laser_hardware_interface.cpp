@@ -99,7 +99,7 @@ hardware_interface::CallbackReturn LaserHardwareInterface::on_configure(
 
   if (!canBus_.open(
         can_interface_,
-        std::bind(&LaserHardwareInterface::onCanMessage, this, std::placeholders::_1)))
+        std::bind(&LaserHardwareInterface::on_can_message, this, std::placeholders::_1)))
   {
     RCLCPP_WARN(
       rclcpp::get_logger("LaserHardwareInterface"),
@@ -124,7 +124,7 @@ hardware_interface::CallbackReturn LaserHardwareInterface::on_configure(
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-void LaserHardwareInterface::onCanMessage(const CANLib::CanFrame & frame)
+void LaserHardwareInterface::on_can_message(const CANLib::CanFrame & frame)
 {
   auto & joint = LASERJoints_.front();
 

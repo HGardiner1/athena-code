@@ -144,7 +144,7 @@ hardware_interface::CallbackReturn CCDHardwareInterface::on_configure(
   joint.last_frame_id          = 0.0;
 
   pixel_pub_node_ = rclcpp::Node::make_shared("ccd_hwi_pixel_publisher");
-  pixel_publisher_ = pixel_pub_node_->create_publisher<raman_msgs::msg::RamanSpectrum>(
+  pixel_publisher_ = pixel_pub_node_->create_publisher<msgs::msg::RamanSpectrum>(
     "/raman/raw_pixels", rclcpp::QoS(1).reliable());
 
   return hardware_interface::CallbackReturn::SUCCESS;
@@ -239,7 +239,7 @@ void CCDHardwareInterface::onCanMessage(const CANLib::CanFrame & frame)
 
       // Publish completed pixel buffer
       if (pixel_publisher_) {
-        raman_msgs::msg::RamanSpectrum msg;
+        msgs::msg::RamanSpectrum msg;
         msg.header.stamp    = rclcpp::Clock().now();
         msg.header.frame_id = "ccd_sensor";
         msg.spectrometer_id = "pda_spectrometer";

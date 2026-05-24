@@ -72,7 +72,7 @@ hardware_interface::CallbackReturn SensorDiodeHardwareInterface::on_init(
     // command
     0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     // tracking
-    0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0,
     // internal
     false, 0.0
   });
@@ -242,7 +242,7 @@ hardware_interface::return_type SensorDiodeHardwareInterface::write(
   }
 
   // --- Measurement request: one-shot on rising edge > 0.5 ---
-  if (joint.request_measurement_cmd > 0.5) {
+  if (joint.request_measurement_cmd > 0.5 && joint.prev_request_measurement_cmd <= 0.5) {
     joint.command_success      = 0.0;
     joint.awaiting_response    = true;
     if (can_connected_) {
@@ -255,13 +255,9 @@ hardware_interface::return_type SensorDiodeHardwareInterface::write(
       RCLCPP_INFO(
         rclcpp::get_logger("SensorDiodeHardwareInterface"),
         "Requested diode measurement on port %u", port_id_);
-    } else {
-      RCLCPP_INFO(
-        rclcpp::get_logger("SensorDiodeHardwareInterface"),
-        "Requested diode measurement on port %u (simulated)", port_id_);
     }
-    joint.request_measurement_cmd = 0.0;
   }
+  joint.prev_request_measurement_cmd = joint.request_measurement_cmd;
 
   // --- Status request: one-shot (negative) or heartbeat (positive Hz) ---
   const double curr_status_req = joint.status_request;

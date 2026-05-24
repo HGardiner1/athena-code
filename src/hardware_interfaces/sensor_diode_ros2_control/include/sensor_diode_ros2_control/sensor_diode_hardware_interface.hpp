@@ -80,6 +80,7 @@ private:
     double prev_maintenance_request;
     double elapsed_status_request_time;
     double elapsed_maintenance_request_time;
+    double prev_request_measurement_cmd;
 
     // Internal
     bool awaiting_response;

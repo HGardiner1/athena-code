@@ -15,7 +15,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp_lifecycle
   realtime_tools
   std_srvs
-  raman_msgs 
+  msgs 
 )
 
 find_package(ament_cmake REQUIRED)

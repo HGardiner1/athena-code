@@ -136,10 +136,10 @@ controller_interface::CallbackReturn CCDSnapshotController::on_configure(
       std::placeholders::_1,
       std::placeholders::_2));
 
-  pixel_subscriber_ = get_node()->create_subscription<raman_msgs::msg::RamanSpectrum>(
+  pixel_subscriber_ = get_node()->create_subscription<msgs::msg::RamanSpectrum>(
     "/raman/raw_pixels",
     rclcpp::QoS(1).reliable(),
-    [this](const raman_msgs::msg::RamanSpectrum::SharedPtr msg) {
+    [this](const msgs::msg::RamanSpectrum::SharedPtr msg) {
       pixel_buffer_.writeFromNonRT(msg->intensities);
   });
 
@@ -148,7 +148,7 @@ controller_interface::CallbackReturn CCDSnapshotController::on_configure(
 
   realtime_status_publisher_ = std::make_unique<StatusPublisher>(status_publisher_);
 
-  spectrum_publisher_ = get_node()->create_publisher<raman_msgs::msg::RamanSpectrum>(
+  spectrum_publisher_ = get_node()->create_publisher<msgs::msg::RamanSpectrum>(
     snapshot_publish_topic_, rclcpp::QoS(10));
 
   auto initial_request = std::make_shared<SnapshotRequest>();
@@ -325,7 +325,7 @@ void CCDSnapshotController::publish_status(const rclcpp::Time & /*time*/)
 
 void CCDSnapshotController::publish_spectrum(const rclcpp::Time & time)
 {
-  auto msg = raman_msgs::msg::RamanSpectrum();
+  auto msg = msgs::msg::RamanSpectrum();
 
   msg.header.stamp = time;
   msg.header.frame_id = "raman_probe";

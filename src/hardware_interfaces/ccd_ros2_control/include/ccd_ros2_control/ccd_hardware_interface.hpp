@@ -17,7 +17,7 @@
 #include "umdloop_can_library/SocketCanBus.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
-#include "raman_msgs/msg/raman_spectrum.hpp"
+#include "msgs/msg/raman_spectrum.hpp"
 
 namespace CANLib
 {
@@ -104,7 +104,7 @@ public:
   };
 
 private:
-  void onCanMessage(const CANLib::CanFrame & frame);
+  void on_can_message(const CANLib::CanFrame & frame);
   bool format_maintenance_command(
     CANLib::CanFrame & frame, uint32_t can_id, const DecodedCommand & decoded_cmd);
 
@@ -120,7 +120,7 @@ private:
   double elapsed_logger_time_;
 
   rclcpp::Node::SharedPtr pixel_pub_node_;
-  rclcpp::Publisher<raman_msgs::msg::RamanSpectrum>::SharedPtr pixel_publisher_;
+  rclcpp::Publisher<msgs::msg::RamanSpectrum>::SharedPtr pixel_publisher_;
 
   std::vector<CCDJoint> CCDJoints_;
 

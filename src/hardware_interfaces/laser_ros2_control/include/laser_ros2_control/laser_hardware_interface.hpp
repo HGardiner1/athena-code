@@ -71,7 +71,7 @@ private:
     double elapsed_status_request_time;
   };
 
-  void onCanMessage(const CANLib::CanFrame & frame);
+  void on_can_message(const CANLib::CanFrame & frame);
   std::string can_interface_;
   uint32_t can_id_;         
   uint8_t port_id_;          

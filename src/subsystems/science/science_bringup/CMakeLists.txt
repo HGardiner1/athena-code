@@ -22,6 +22,7 @@ install(
 
 install(PROGRAMS
   scripts/ccd_can_simulator.py
+  scripts/sensor_diode_can_simulator.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

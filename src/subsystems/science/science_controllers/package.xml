@@ -27,7 +27,7 @@
 
   <depend>std_srvs</depend>
 
-  <depend>raman_msgs</depend>
+  <depend>msgs</depend>
 
   <export>
     <pluginlib plugin="${prefix}/science_controllers.xml"/>
